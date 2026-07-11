@@ -75,22 +75,33 @@ function isValidShape(o: unknown): boolean {
   }
   if (typeof x.urgency_reason !== "string") return false;
 
-  if (!Array.isArray(x.medications)) return false;
-  for (const m of x.medications) {
-    if (typeof m !== "object" || m === null) return false;
-    const mm = m as Record<string, unknown>;
-    if (typeof mm.name !== "string" || typeof mm.time !== "string") return false;
+  // medications and interventions: null (or missing) means "nothing to
+  // report" and is semantically identical to []. If present as an array, its
+  // items must still match the spec-§10 shape exactly.
+  if (x.medications != null) {
+    if (!Array.isArray(x.medications)) return false;
+    for (const m of x.medications) {
+      if (typeof m !== "object" || m === null) return false;
+      const mm = m as Record<string, unknown>;
+      if (typeof mm.name !== "string" || typeof mm.time !== "string") {
+        return false;
+      }
+    }
   }
 
   if (!isStringOrNull(x.mood)) return false;
 
-  if (!Array.isArray(x.interventions)) return false;
-  for (const i of x.interventions) {
-    if (typeof i !== "object" || i === null) return false;
-    const ii = i as Record<string, unknown>;
-    if (typeof ii.what !== "string") return false;
-    if (ii.worked !== "yes" && ii.worked !== "no" && ii.worked !== "unclear") {
-      return false;
+  if (x.interventions != null) {
+    if (!Array.isArray(x.interventions)) return false;
+    for (const i of x.interventions) {
+      if (typeof i !== "object" || i === null) return false;
+      const ii = i as Record<string, unknown>;
+      if (typeof ii.what !== "string") return false;
+      if (
+        ii.worked !== "yes" && ii.worked !== "no" && ii.worked !== "unclear"
+      ) {
+        return false;
+      }
     }
   }
 
@@ -198,5 +209,13 @@ Deno.serve(async (req) => {
     return jsonResponse(envelope({ ...SAFE_FALLBACK }));
   }
 
-  return jsonResponse(envelope(parsed as Record<string, unknown>));
+  // Normalize null/missing arrays to [] so the client always sees the same
+  // shape (spec §10). isValidShape already accepted null as equivalent.
+  const p = parsed as Record<string, unknown>;
+  const normalized = {
+    ...p,
+    medications: Array.isArray(p.medications) ? p.medications : [],
+    interventions: Array.isArray(p.interventions) ? p.interventions : [],
+  };
+  return jsonResponse(envelope(normalized));
 });
