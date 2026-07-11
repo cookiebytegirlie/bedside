@@ -169,12 +169,12 @@ Deno.serve(async (req) => {
   const url = `${base}/api/v1/chat/completions`;
 
   // DO trends agent latency in the playground is ~32s; via this API path it
-  // is materially slower (empirically both 45s attempts time out, so real
-  // latency > 45s). 90s per attempt gives the agent enough runway, with one
-  // retry on timeout only (HTTP errors don't fix themselves on retry). Every
-  // attempt logs elapsed ms so we can see the real latency in Function logs.
+  // typically completes in ~58s. Single attempt with a 90s cap - a 180s
+  // worst case (two attempts) is a three-minute silent hang in a live demo,
+  // which is worse UX than failing fast to the honest SAFE_FALLBACK. Elapsed
+  // ms is logged either way so the real latency stays visible.
   const ATTEMPT_TIMEOUT_MS = 90_000;
-  const MAX_ATTEMPTS = 2;
+  const MAX_ATTEMPTS = 1;
 
   let content: string | null = null;
   let sawTimeout = false;

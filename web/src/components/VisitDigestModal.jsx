@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { visitDigest } from '../mockData'
-import { fetchVisitDigest } from '../lib/api'
+import { fetchVisitDigest, refreshVisitDigest } from '../lib/api'
 import { canSeeMeds } from '../utils/roles'
 import { CheckIcon, XIcon, BellIcon, TrendUpIcon, TrendDownIcon, MoonIcon, RefreshIcon } from './icons'
 
@@ -44,16 +44,17 @@ export default function VisitDigestModal({ open, onClose, role, onReview }) {
   const [digest, setDigest] = useState(visitDigest)
   const [loading, setLoading] = useState(false)
 
-  async function loadDigest() {
+  async function loadDigest({ force = false } = {}) {
     setLoading(true)
     try {
-      setDigest(await fetchVisitDigest())
+      setDigest(await (force ? refreshVisitDigest() : fetchVisitDigest()))
     } finally {
       setLoading(false)
     }
   }
 
-  // Re-fetch each time the modal is opened, so the content visibly arrives.
+  // On open, await whatever the app-load prefetch already kicked off (usually
+  // resolved or nearly so). Refresh button forces a fresh fetch.
   useEffect(() => {
     if (open) loadDigest()
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -93,7 +94,7 @@ export default function VisitDigestModal({ open, onClose, role, onReview }) {
           <div className="flex shrink-0 items-center gap-1">
             <button
               type="button"
-              onClick={loadDigest}
+              onClick={() => loadDigest({ force: true })}
               disabled={loading}
               aria-label="Refresh digest"
               className="rounded-full p-1 text-muted active:scale-90 disabled:opacity-60"

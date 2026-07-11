@@ -8,7 +8,7 @@ import {
   generalVolunteerSlot,
   defaultGeneralCode,
 } from '../mockData'
-import { isWithinWindow, formatWindow } from '../utils/time'
+import { isWithinWindow } from '../utils/time'
 
 const HouseholdContext = createContext(null)
 
@@ -18,10 +18,6 @@ let logCounter = initialLogs.length
 // (10-15 minutes of inactivity before automatic logoff).
 const SESSION_TIMEOUT_MS = 15 * 60 * 1000
 const ACTIVITY_EVENTS = ['pointerdown', 'keydown', 'touchstart']
-
-// How often an active scheduled session (a volunteer with a shift window)
-// re-checks whether it's still within that window.
-const SCHEDULE_POLL_MS = 30000
 
 function initialsFor(name) {
   const parts = name.trim().split(/\s+/)
@@ -177,26 +173,14 @@ export function HouseholdProvider({ children }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeProfile])
 
-  // Scheduled profiles only (Marcus's shift, or a general-code sign-in):
-  // keep re-checking the clock while signed in, and log out automatically
-  // once the window closes. Family and nurse profiles have no `schedule`,
-  // so they're exempt and can use the app anytime.
-  useEffect(() => {
-    if (!activeProfile?.schedule) return
-
-    const { startHour, endHour } = activeProfile.schedule
-    const interval = setInterval(() => {
-      if (isWithinWindow(startHour, endHour)) return
-      setActiveProfile((current) => {
-        if (current) {
-          logAccess(current.name, 'Auto-logged out', `Access window ended (${formatWindow(startHour, endHour)})`)
-        }
-        return null
-      })
-    }, SCHEDULE_POLL_MS)
-
-    return () => clearInterval(interval)
-  }, [activeProfile, logAccess])
+  // Schedule enforcement is login-gated only (see loginWithPin above): a
+  // volunteer with a 3pm-8pm window cannot sign in at 9pm. We deliberately
+  // do NOT poll the clock mid-session and boot the user - a background
+  // interval that terminates a session while the user is mid-action looks
+  // like "the app just logged me out for no reason" (and in demo/testing
+  // hours outside the volunteer's schedule, it fires every 30 seconds).
+  // Production auto-logoff belongs to the inactivity timer above, which
+  // resets on activity events and is the actual HIPAA-shaped requirement.
 
   const addLog = useCallback((entry) => {
     logCounter += 1

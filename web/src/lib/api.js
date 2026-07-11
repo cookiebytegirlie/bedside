@@ -125,9 +125,12 @@ function asText(item) {
 
 // Best-effort read of whether an intervention helped, from a free-text outcome
 // plus an optional count, mapped to the three states the WorkingRow renders.
+// 'less effective|diminishing|declining|waning|reduced' are treated as mixed —
+// a fading intervention rendered as 'working' is a safety issue in a hospice
+// app, not a cosmetic one.
 function workingStatus(outcome, count) {
   const o = String(outcome || '').toLowerCase()
-  if (/mixed|sometimes|inconsistent|varied|partial/.test(o)) return 'mixed'
+  if (/mixed|sometimes|inconsistent|varied|partial|less effective|diminishing|declining|waning|reduced/.test(o)) return 'mixed'
   if (count === 0 || /\bno\b|didn'?t|did not|not help|unhelpful|ineffective/.test(o)) return 'no'
   return 'yes'
 }
@@ -205,7 +208,13 @@ const DIGEST_SLOW_EMPTY_MS = 8000
 // materially slower via the API path, hence the wide cap.
 const DIGEST_TIMEOUT_MS = 200_000
 
-export async function fetchVisitDigest() {
+// Module-scoped promise cache. At ~58s live latency the modal cannot afford
+// to cold-start on open; startVisitDigestPrefetch() fires from main.jsx on
+// app load so the fetch is in flight by the time the user reaches the
+// timeline. Any await after the first hop shares the same in-flight promise.
+let _digestPromise = null
+
+async function fetchVisitDigestFresh() {
   if (!isBackendConfigured()) {
     // No key yet — keep a brief "reasoning" beat so the loading state is
     // visible, then hand back the hardcoded digest.
@@ -237,12 +246,38 @@ export async function fetchVisitDigest() {
       }
       console.info(`[fetchVisitDigest] empty response in ${elapsed}ms, retrying (${attempt}/${DIGEST_MAX_ATTEMPTS})`)
     } catch (err) {
-      // A network/HTTP error or the 8s abort won't fix itself on retry — stop.
+      // A network/HTTP error or the abort won't fix itself on retry — stop.
       console.warn('[fetchVisitDigest] falling back to hardcoded digest:', err?.message || err)
       break
     }
   }
   return { ...fallbackDigest, _fallback: true }
+}
+
+// Kick off the digest fetch once, at app load. If called again before it
+// resolves, returns the same in-flight promise so consumers share the wait
+// instead of duplicating the ~58s request.
+export function startVisitDigestPrefetch() {
+  if (!_digestPromise) {
+    _digestPromise = fetchVisitDigestFresh()
+    // Swallow unhandled rejection warnings if the initial caller never awaits.
+    _digestPromise.catch(() => {})
+  }
+  return _digestPromise
+}
+
+// Invalidate the cache and start a fresh fetch — used by the modal's refresh
+// button so tapping it always re-hits the agent.
+export function refreshVisitDigest() {
+  _digestPromise = fetchVisitDigestFresh()
+  _digestPromise.catch(() => {})
+  return _digestPromise
+}
+
+// Public API preserved: returns the cached (possibly in-flight) promise, or
+// kicks one off if nothing has prefetched yet.
+export function fetchVisitDigest() {
+  return startVisitDigestPrefetch()
 }
 
 // The deployed summarize function intermittently returns a parse-failure stub
