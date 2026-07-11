@@ -198,6 +198,12 @@ function normalizeDigest(data) {
 // empty response taking 60s), so we stop and fall back instead.
 const DIGEST_MAX_ATTEMPTS = 4
 const DIGEST_SLOW_EMPTY_MS = 8000
+// Per-fetch fail-fast cap that mirrors the server's 8s AbortSignal in
+// get-trends/index.ts. If the DO trends agent is hanging outright (observed:
+// exactly 60s TimeoutError on every call), the first fetch aborts here at 8s
+// and the catch below breaks the retry loop — UI reaches the honest fallback
+// in ~8s instead of spinning for a minute.
+const DIGEST_TIMEOUT_MS = 8_000
 
 export async function fetchVisitDigest() {
   if (!isBackendConfigured()) {
@@ -217,6 +223,7 @@ export async function fetchVisitDigest() {
           Authorization: `Bearer ${ANON_KEY}`,
         },
         body: JSON.stringify({}),
+        signal: AbortSignal.timeout(DIGEST_TIMEOUT_MS),
       })
       if (!res.ok) throw new Error(`get-trends returned HTTP ${res.status}`)
       const digest = normalizeDigest(await res.json())
@@ -230,7 +237,7 @@ export async function fetchVisitDigest() {
       }
       console.info(`[fetchVisitDigest] empty response in ${elapsed}ms, retrying (${attempt}/${DIGEST_MAX_ATTEMPTS})`)
     } catch (err) {
-      // A network/HTTP error won't fix itself on retry — stop and fall back.
+      // A network/HTTP error or the 8s abort won't fix itself on retry — stop.
       console.warn('[fetchVisitDigest] falling back to hardcoded digest:', err?.message || err)
       break
     }

@@ -62,9 +62,13 @@ export default function VisitDigestModal({ open, onClose, role, onReview }) {
   if (!open) return null
   const seeMeds = canSeeMeds(role)
   const working = digest.working.filter((w) => seeMeds || !w.sensitive)
+  // Header must reflect the real state — a demo saying "Analyzed 15 shift logs
+  // from 5 people" while rendering the hardcoded fallback is a false claim.
   const attribution = loading
     ? 'Reading the shift logs…'
-    : 'Analyzed 15 shift logs from 5 people · just now'
+    : digest._fallback
+      ? 'Live analysis unavailable — showing a sample digest'
+      : 'Analyzed your recent shift logs · just now'
 
   return (
     <div

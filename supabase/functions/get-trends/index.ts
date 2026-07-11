@@ -94,16 +94,29 @@ function formatEntries(rows: LogRow[]): string {
 }
 
 // Extracts JSON from a model response that may include markdown fences or
-// prose around the object. Strategy: strip fences, then narrow to the first
-// "{" through the last "}". Falls back to the input if no braces found.
+// prose around the value. Order of preference: any fenced ```json ... ```
+// block (anywhere in the body, not just at the ends); then the first { through
+// the last } (object); then the first [ through the last ] (array); then the
+// raw string as a last resort.
 function extractJson(raw: string): string {
-  const stripped = raw.trim()
-    .replace(/^```(?:json)?\s*/i, "")
-    .replace(/\s*```$/i, "");
-  const first = stripped.indexOf("{");
-  const last = stripped.lastIndexOf("}");
-  if (first === -1 || last === -1 || last < first) return stripped;
-  return stripped.slice(first, last + 1);
+  const trimmed = raw.trim();
+
+  const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+  if (fenced) return fenced[1].trim();
+
+  const firstBrace = trimmed.indexOf("{");
+  const lastBrace = trimmed.lastIndexOf("}");
+  if (firstBrace !== -1 && lastBrace > firstBrace) {
+    return trimmed.slice(firstBrace, lastBrace + 1);
+  }
+
+  const firstBracket = trimmed.indexOf("[");
+  const lastBracket = trimmed.lastIndexOf("]");
+  if (firstBracket !== -1 && lastBracket > firstBracket) {
+    return trimmed.slice(firstBracket, lastBracket + 1);
+  }
+
+  return trimmed;
 }
 
 Deno.serve(async (req) => {
@@ -147,7 +160,13 @@ Deno.serve(async (req) => {
     return jsonResponse(envelope({ ...SAFE_FALLBACK }));
   }
 
-  const url = `${endpoint.replace(/\/$/, "")}/api/v1/chat/completions`;
+  // Normalise the endpoint in case the secret was pasted with a trailing
+  // slash or the full API path already appended (both are easy console-copy
+  // mistakes and would otherwise 404 with a doubled path).
+  const base = endpoint
+    .replace(/\/+$/, "")
+    .replace(/\/api\/v1(?:\/chat\/completions)?$/, "");
+  const url = `${base}/api/v1/chat/completions`;
 
   let content: string | null = null;
   try {
@@ -160,7 +179,10 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         messages: [{ role: "user", content: formatted }],
       }),
-      signal: AbortSignal.timeout(60_000),
+      // Fail fast: the DO trends agent has been observed hanging until the
+      // full timeout on every call. Waiting a full minute just to serve the
+      // honest fallback is worse UX than serving it in 8 seconds.
+      signal: AbortSignal.timeout(8_000),
     });
     if (!resp.ok) {
       const detail = await resp.text().catch(() => "");
@@ -191,10 +213,19 @@ Deno.serve(async (req) => {
     return jsonResponse(envelope({ ...SAFE_FALLBACK }));
   }
 
-  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
-    console.error("get-trends: parsed non-object", parsed);
+  // Accept plain object as-is. If the agent's system prompt has it emitting an
+  // array of trend items (natural for a "list of trends" prompt), wrap it into
+  // { trends: [...] } so the client's digest renderer finds them under a key
+  // it already knows.
+  let payload: Record<string, unknown>;
+  if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+    payload = parsed as Record<string, unknown>;
+  } else if (Array.isArray(parsed)) {
+    payload = { trends: parsed };
+  } else {
+    console.error("get-trends: parsed scalar", parsed);
     return jsonResponse(envelope({ ...SAFE_FALLBACK }));
   }
 
-  return jsonResponse(envelope(parsed as Record<string, unknown>));
+  return jsonResponse(envelope(payload));
 });
