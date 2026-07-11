@@ -140,6 +140,10 @@ Deno.serve(async (req) => {
     envelope({
       answer: messageContent.trim(),
       sources: extractSources(json),
+      // DEBUG: emit the full DO response so we can find whichever field it
+      // uses for citations. Remove after extractSources is pruned to the
+      // real field.
+      _raw: json,
     }),
   );
 });
