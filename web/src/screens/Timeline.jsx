@@ -5,10 +5,11 @@ import { profilePhotos } from '../assets'
 import OnDutyHeader from '../components/OnDutyHeader'
 import UrgencyBadge from '../components/UrgencyBadge'
 import VisitDigestModal from '../components/VisitDigestModal'
+import InfoPanel from '../components/InfoPanel'
 import { canSeeMeds, isNurse } from '../utils/roles'
 import { fetchLogEntries } from '../lib/db'
 import { visitDigest } from '../mockData'
-import { PillIcon, UserIcon, BookIcon, ChevronRightIcon, SparklesIcon } from '../components/icons'
+import { PillIcon, UserIcon, BookIcon, ChevronRightIcon, SparklesIcon, CheckIcon, XIcon, PhoneIcon } from '../components/icons'
 
 // Auto-open the digest only the first time the homepage mounts this session
 // (survives in-app remounts; a full reload resets it).
@@ -62,6 +63,46 @@ function matchProfile(profiles, author) {
 
 function formatMedGiven(m) {
   return `“${m.name} ${m.dose} ${m.route} @ ${m.time} for ${m.reason}”`
+}
+
+// Structured comfort-measure outcomes (from ShiftEnd) → past-tense label,
+// matching the mockup's "Comfort meds — didn't help" phrasing.
+const TRIED_LABEL = { helped: 'helped', didnt: "didn't help", notsure: 'not sure' }
+
+// First name for the "own words" toggle label — strips a trailing role
+// parenthetical like "Marcus (volunteer)" first.
+function firstNameOf(author) {
+  return author.replace(/\s*\([^)]*\)\s*$/, '').trim().split(/\s+/)[0]
+}
+
+// Reveals a caregiver's raw dictated quote under a collapsed toggle — same
+// chevron-rotate affordance as EssentialInfo's ExpandToggle, scoped to one
+// Timeline entry.
+function OwnWordsToggle({ authorFirst, text }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className="mt-2">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="flex items-center gap-1 text-[12px] font-semibold text-mist active:scale-[0.98]"
+      >
+        <ChevronRightIcon
+          width={13}
+          height={13}
+          strokeWidth={2.5}
+          className={`transition-transform ${open ? 'rotate-90' : ''}`}
+        />
+        {open ? 'Hide' : `See ${authorFirst}'s own words`}
+      </button>
+      {open && (
+        <p className="mt-1.5 border-l-2 border-sage-300 pl-3 text-[13px] font-medium italic leading-snug text-ink/80">
+          “{text}”
+        </p>
+      )}
+    </div>
+  )
 }
 
 // Entries logged in the same visit to the Log screen share a sessionId.
@@ -152,7 +193,7 @@ export default function Timeline() {
         <button
           type="button"
           onClick={() => setDigestOpen(true)}
-          className="mx-auto flex w-full max-w-md items-center gap-2.5 rounded-[7px] bg-white p-3 shadow-card transition-transform active:scale-[0.99] lg:max-w-2xl"
+          className="mx-auto flex w-full max-w-md items-center gap-2.5 rounded-[8px] bg-white p-3 shadow-card transition-transform active:scale-[0.99] lg:max-w-2xl"
         >
           <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-sage-100 text-mist">
             <SparklesIcon width={17} height={17} strokeWidth={2} />
@@ -164,8 +205,8 @@ export default function Timeline() {
           <ChevronRightIcon width={16} height={16} strokeWidth={2.5} className="shrink-0 text-mist" />
         </button>
 
-        <div className="relative mx-auto mt-8 max-w-md lg:max-w-2xl">
-          <div className="rounded-[7px] bg-white p-4 pb-4 pt-8 shadow-card">
+        <div className="relative mx-auto mt-16 max-w-md lg:max-w-2xl">
+          <div className="rounded-[8px] bg-white p-4 pb-4 pt-8 shadow-card">
             <div className="pl-28">
               <p className="text-[19px] font-bold leading-tight text-ink">{household.preferredName}'s current status</p>
               <p className="mt-1.5 text-[13px] font-medium leading-tight text-ink">
@@ -180,19 +221,20 @@ export default function Timeline() {
                 )}
               </p>
             </div>
-            <Link
+            <InfoPanel
+              as={Link}
               to={`/household/${householdId}/about`}
-              className="mt-3 flex items-center gap-2.5 rounded-[5px] bg-sage-50 px-3 py-2.5 transition-transform active:scale-[0.99]"
+              className="mt-3 flex items-center gap-2.5 px-3 py-2.5 transition-transform active:scale-[0.99]"
             >
               <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white text-mist shadow-card">
                 <BookIcon width={15} height={15} strokeWidth={2} />
               </span>
-              <span className="min-w-0 flex-1 text-[12px] font-medium leading-snug text-ink/70">
+              <span className="min-w-0 flex-1 text-[12px] font-medium leading-snug">
                 Get to know {household.preferredName} — her habits, routines, and personal story.{' '}
                 <span className="font-bold text-mist">Learn more</span>
               </span>
               <ChevronRightIcon width={15} height={15} strokeWidth={2.5} className="shrink-0 text-mist" />
-            </Link>
+            </InfoPanel>
           </div>
           <div className="absolute -top-8 left-0">
             <img src={profilePhotos.ellie} alt="" className="h-28 w-28 rounded-full border-4 border-white object-cover shadow-card" />
@@ -203,7 +245,7 @@ export default function Timeline() {
         <h1 className="mb-5 mt-6 text-center text-[26px] font-bold text-ink">Timeline</h1>
 
         {buckets.map((bucket) => (
-          <div key={bucket.label} className="mb-4 rounded-[7px] bg-white p-4 shadow-card last:mb-0">
+          <div key={bucket.label} className="mb-4 rounded-[8px] bg-white p-4 shadow-card last:mb-0">
             <h2 className="text-xl font-bold leading-tight text-ink">{bucket.label}</h2>
             <p className="mb-3 text-[11px] font-bold text-muted">{formatFullDate(bucket.groups[0].timestamp)}</p>
 
@@ -211,9 +253,29 @@ export default function Timeline() {
               const matched = matchProfile(profiles, group.author)
               const photo = matched && profilePhotos[matched.id]
               const medItem = group.items.find((l) => l.medicationGiven)
+              const triedItems = group.items.flatMap((l) => (Array.isArray(l.tried) ? l.tried : []))
+              const escalatedItem = group.items.find((l) => l.escalatedAt)
+              const rawItem = group.items.find((l) => l.rawTranscript)
+
+              // Colored left rail: red for a flagged group, green once a
+              // group has fully settled — i.e. every entry is routine and an
+              // earlier group the same day (later in this newest-first list)
+              // was red.
+              const allGreen = group.items.every((l) => (l.urgency ?? 'green') === 'green')
+              const priorRedSameDay = bucket.groups.slice(i + 1).some((g) => g.urgency === 'red')
+              const settled = allGreen && priorRedSameDay
+              const railClass =
+                group.urgency === 'red'
+                  ? 'border-l-2 border-attention-fg pl-3'
+                  : settled
+                    ? 'border-l-2 border-routine-fg pl-3'
+                    : ''
 
               return (
-                <div key={group.sessionId} className={i > 0 ? 'mt-4 border-t border-sage-100 pt-4' : ''}>
+                <div
+                  key={group.sessionId}
+                  className={`${i > 0 ? 'mt-4 border-t border-sage-100 pt-4' : ''} ${railClass}`.trim()}
+                >
                   <div className="flex items-center gap-2">
                     <span className="h-1.5 w-1.5 rounded-full bg-ink/20" />
                     <span className="text-[13px] font-semibold text-muted">{formatTime(group.timestamp)}</span>
@@ -236,7 +298,7 @@ export default function Timeline() {
                         <p className="truncate text-xs font-semibold leading-tight text-muted">{matched?.role || ''}</p>
                       </div>
                     </div>
-                    <span className="flex shrink-0 items-center gap-1.5 rounded-[5px] bg-[#e2f4eb] px-2.5 py-1.5 text-ink">
+                    <span className="flex shrink-0 items-center gap-1.5 rounded-[8px] bg-[#e2f4eb] px-2.5 py-1.5 text-ink">
                       <UserIcon width={13} height={13} strokeWidth={2} />
                       <span className="text-[10px] font-semibold leading-tight">
                         Patient Status:
@@ -254,8 +316,36 @@ export default function Timeline() {
                     ))}
                   </div>
 
+                  {triedItems.length > 0 && (
+                    <div className="mt-2 space-y-1">
+                      {triedItems.map((t, idx) => (
+                        <div key={idx} className="flex items-center gap-1.5 text-[13px] font-medium text-ink">
+                          {t.outcome === 'helped' ? (
+                            <CheckIcon width={14} height={14} strokeWidth={2.5} className="shrink-0 text-routine-fg" />
+                          ) : (
+                            <XIcon width={14} height={14} strokeWidth={2.5} className="shrink-0 text-attention-fg" />
+                          )}
+                          <span>
+                            {t.name} — {TRIED_LABEL[t.outcome] ?? t.outcome}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {escalatedItem && (
+                    <div className="mt-2 flex items-center gap-1.5 text-[13px] font-semibold text-attention-fg">
+                      <PhoneIcon width={14} height={14} strokeWidth={2} className="shrink-0" />
+                      <span>Nurse notified automatically at {formatTime(escalatedItem.escalatedAt)}</span>
+                    </div>
+                  )}
+
+                  {rawItem && (
+                    <OwnWordsToggle authorFirst={firstNameOf(group.author)} text={rawItem.rawTranscript} />
+                  )}
+
                   {seeMeds && medItem && (
-                    <div className="mt-2.5 flex items-start gap-2.5 rounded-[5px] border border-mist bg-white p-3">
+                    <div className="mt-2.5 flex items-start gap-2.5 rounded-[8px] border border-mist bg-white p-3">
                       <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-clay-50 text-clay-500">
                         <PillIcon width={15} height={15} strokeWidth={2} />
                       </span>

@@ -1,10 +1,12 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useHousehold } from '../state/HouseholdContext'
-import { ellieProfile } from '../mockData'
+import { ellieProfile, carePlanDocument } from '../mockData'
 import { profilePhotos } from '../assets'
 import { askAboutEllie } from '../ai/mockAgent'
 import OnDutyHeader from '../components/OnDutyHeader'
+import AiSourceDisclosure from '../components/AiSourceDisclosure'
+import CarePlanLink from '../components/CarePlanLink'
 import {
   ArrowLeftIcon,
   AlertTriangleIcon,
@@ -12,7 +14,6 @@ import {
   CloudIcon,
   MoonIcon,
   SparklesIcon,
-  BookIcon,
   PhoneIcon,
   ChevronRightIcon,
 } from '../components/icons'
@@ -34,7 +35,7 @@ const DAY_FIELDS = [
 // Standalone, always-visible warning — never collapsed inside a panel.
 function TurnWarning({ seg }) {
   return (
-    <div className="rounded-[7px] bg-watch-bg p-4">
+    <div className="rounded-[8px] bg-watch-bg p-4">
       <div className="mb-1 flex items-center gap-2 text-watch-fg">
         <AlertTriangleIcon width={17} height={17} strokeWidth={2} />
         <p className="text-[15px] font-bold">
@@ -53,7 +54,7 @@ function DayPanel({ seg }) {
   const Icon = DAY_ICON[seg.icon] || SunIcon
 
   return (
-    <div className="overflow-hidden rounded-[7px] bg-white shadow-card">
+    <div className="overflow-hidden rounded-[8px] bg-white shadow-card">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
@@ -88,7 +89,8 @@ function DayPanel({ seg }) {
   )
 }
 
-function AskAboutEllie({ name, suggestions }) {
+function AskAboutEllie({ suggestions }) {
+  const { householdId } = useParams()
   const [question, setQuestion] = useState('')
   const [thread, setThread] = useState([])
   const [asking, setAsking] = useState(false)
@@ -100,12 +102,28 @@ function AskAboutEllie({ name, suggestions }) {
     setQuestion('')
     setAsking(true)
     const res = await askAboutEllie(text)
-    setThread((t) => [...t, { role: 'agent', text: res.answer, source: res.source }])
+    setThread((t) => [
+      ...t,
+      {
+        role: 'agent',
+        text: res.answer,
+        source: res.source,
+        reasoning: res.reasoning,
+        confidence: res.confidence,
+        // 'about' = this same Meet Ellie page (plain same-page anchor);
+        // 'info' = the Essential Information page (cross-page route).
+        sourceHref: res.sectionId
+          ? res.page === 'info'
+            ? `/household/${householdId}/info#${res.sectionId}`
+            : `#${res.sectionId}`
+          : undefined,
+      },
+    ])
     setAsking(false)
   }
 
   return (
-    <div className="rounded-[7px] bg-white p-4 shadow-card">
+    <div className="rounded-[8px] bg-white p-4 shadow-card">
       {thread.length === 0 ? (
         <div className="mb-3 flex flex-wrap gap-2">
           {suggestions.map((s) => (
@@ -124,19 +142,19 @@ function AskAboutEllie({ name, suggestions }) {
           {thread.map((m, i) =>
             m.role === 'user' ? (
               <div key={i} className="flex justify-end">
-                <div className="max-w-[85%] rounded-[7px] bg-mist px-3.5 py-2 text-[13px] font-medium text-white">
+                <div className="max-w-[85%] rounded-[8px] bg-mist px-3.5 py-2 text-[13px] font-medium text-white">
                   {m.text}
                 </div>
               </div>
             ) : (
               <div key={i} className="max-w-[92%]">
                 <p className="text-[13px] font-medium leading-snug text-ink">{m.text}</p>
-                {m.source && (
-                  <span className="mt-1.5 inline-flex items-center gap-1 rounded-[5px] bg-sage-50 px-2 py-1 text-[11px] font-semibold text-mist">
-                    <BookIcon width={12} height={12} strokeWidth={2} />
-                    From {name}’s care plan — {m.source}
-                  </span>
-                )}
+                <AiSourceDisclosure
+                  reasoning={m.reasoning}
+                  source={m.source}
+                  sourceHref={m.sourceHref}
+                  confidence={m.confidence}
+                />
               </div>
             )
           )}
@@ -149,7 +167,7 @@ function AskAboutEllie({ name, suggestions }) {
           e.preventDefault()
           ask()
         }}
-        className="flex items-center gap-2 rounded-[5px] border border-sage-200 p-1.5"
+        className="flex items-center gap-2 rounded-[8px] border border-sage-200 p-1.5"
       >
         <input
           value={question}
@@ -188,8 +206,16 @@ export default function MeetEllie() {
           <ArrowLeftIcon width={22} height={22} strokeWidth={2} />
         </Link>
 
+        <div className="mb-4">
+          <CarePlanLink
+            to={`/household/${householdId}/care-plan-doc`}
+            fileName={carePlanDocument.fileName}
+            lastUpdated={carePlanDocument.lastUpdated}
+          />
+        </div>
+
         {/* Note from Daniel — identity + personal letter, in one card */}
-        <div className="rounded-[7px] bg-white p-5 shadow-card">
+        <div id="ellie-intro" className="rounded-[8px] bg-white p-5 shadow-card">
           <div className="flex flex-col items-center text-center">
             <img
               src={profilePhotos.ellie}
@@ -214,7 +240,7 @@ export default function MeetEllie() {
             <AlertTriangleIcon width={19} height={19} strokeWidth={2} className="text-attention-fg" />
             Any hour, please don’t
           </h2>
-          <div className="rounded-[7px] bg-white p-5 shadow-card">
+          <div className="rounded-[8px] bg-white p-5 shadow-card">
             <div className="grid grid-cols-2 gap-x-4 gap-y-3.5">
               {ellieProfile.avoid.map((a) => (
                 <div key={a.title} className="flex gap-2">
@@ -230,7 +256,7 @@ export default function MeetEllie() {
         </section>
 
         {/* Her day — collapsible per period; the "turn" warning stays open */}
-        <section className="mt-5">
+        <section id="her-day" className="mt-5">
           <h2 className="text-xl font-bold text-ink">Her day</h2>
           <p className="mb-2 text-[13px] font-semibold text-muted">Tap a time of day to expand</p>
           <div className="space-y-2.5">
@@ -246,11 +272,11 @@ export default function MeetEllie() {
             <SparklesIcon width={19} height={19} strokeWidth={2} className="text-mist" />
             Ask anything about {name}
           </h2>
-          <AskAboutEllie name={name} suggestions={ellieProfile.askSuggestions} />
+          <AskAboutEllie suggestions={ellieProfile.askSuggestions} />
         </section>
 
         {/* Reach out */}
-        <div className="mt-5 rounded-[7px] bg-white p-4 shadow-card">
+        <div className="mt-5 rounded-[8px] bg-white p-4 shadow-card">
           <p className="text-center text-[12px] font-medium leading-snug text-ink/55">{ellieProfile.footerNote}</p>
           <div className="mt-3 grid grid-cols-2 gap-2">
             {danielPhone && (

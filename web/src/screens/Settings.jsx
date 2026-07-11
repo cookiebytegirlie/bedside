@@ -1,7 +1,7 @@
 import { useParams, Link } from 'react-router-dom'
 import { useHousehold } from '../state/HouseholdContext'
 import { canSeeMeds, isNurse } from '../utils/roles'
-import TopBar from '../components/TopBar'
+import OnDutyHeader from '../components/OnDutyHeader'
 import { CalendarIcon, ChevronRightIcon, PillIcon, FileTextIcon, ClipboardIcon } from '../components/icons'
 
 function SettingRow({ to, icon: Icon, title, subtitle }) {
@@ -31,8 +31,10 @@ export default function Settings() {
 
   return (
     <>
-      <TopBar title="Settings" subtitle="" />
+      <OnDutyHeader />
       <main className="flex-1 px-5 py-5">
+        <h1 className="mb-5 text-center text-2xl font-bold text-ink">Settings</h1>
+
         <SettingRow
           to={`${base}/settings/access`}
           icon={CalendarIcon}

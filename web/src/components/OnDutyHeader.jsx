@@ -1,6 +1,7 @@
 import { useNavigate, useParams } from 'react-router-dom'
 import { useHousehold } from '../state/HouseholdContext'
 import { formatCountdown, isWithinWindow, minutesUntil, formatMinutesLeft } from '../utils/time'
+import { householdLogo } from '../assets'
 import { BellIcon, PowerIcon } from './icons'
 
 // White header row shared by the redesigned screens (Timeline, Log New
@@ -17,7 +18,12 @@ export default function OnDutyHeader() {
 
   return (
     <header className="sticky top-0 z-10 border-b border-sage-100 bg-white px-5 pb-4 pt-[calc(env(safe-area-inset-top)+1.25rem)]">
-      <div className="mx-auto flex max-w-md items-start justify-between gap-3 lg:max-w-2xl">
+      <div className="relative mx-auto flex max-w-md items-start justify-between gap-3 lg:max-w-2xl">
+        <img
+          src={householdLogo}
+          alt="Bedside"
+          className="absolute left-1/2 top-1/2 h-7 w-7 -translate-x-1/2 -translate-y-1/2 rounded-[8px] object-cover"
+        />
         <div className="min-w-0">
           {activeProfile && (
             <p className="text-[10px] font-bold text-routine-fg">

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useHousehold } from '../state/HouseholdContext'
 import { hoursToTimeString, parseTimeToHours, formatWindow } from '../utils/time'
-import TopBar from '../components/TopBar'
+import OnDutyHeader from '../components/OnDutyHeader'
 import { CalendarIcon, RefreshIcon } from '../components/icons'
 
 function ScheduleEditor({ title, description, startHour, endHour, onSave }) {
@@ -60,8 +60,13 @@ function ScheduleEditor({ title, description, startHour, endHour, onSave }) {
 function NotAllowed() {
   return (
     <>
-      <TopBar title="Volunteer access" subtitle="Primary caregivers only" />
+      <OnDutyHeader />
       <main className="flex-1 px-5 py-5">
+        <div className="mb-5 text-center">
+          <h1 className="text-2xl font-bold text-ink">Volunteer access</h1>
+          <p className="mt-1 text-sm font-semibold text-muted">Primary caregivers only</p>
+        </div>
+
         <div className="rounded-4xl bg-clay-50 p-5 text-base font-medium text-ink/70 shadow-card">
           Only primary caregivers can manage volunteer shift access. Ask Daniel to make changes here.
         </div>
@@ -80,8 +85,13 @@ export default function VolunteerAccess() {
 
   return (
     <>
-      <TopBar title="Volunteer access" subtitle="Set when volunteers can sign in" />
+      <OnDutyHeader />
       <main className="flex-1 px-5 py-5">
+        <div className="mb-5 text-center">
+          <h1 className="text-2xl font-bold text-ink">Volunteer access</h1>
+          <p className="mt-1 text-sm font-semibold text-muted">Set when volunteers can sign in</p>
+        </div>
+
         <section>
           <h2 className="mb-2 flex items-center gap-1.5 text-xl font-bold text-ink">
             <CalendarIcon width={17} height={17} strokeWidth={2} />

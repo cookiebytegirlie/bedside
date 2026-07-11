@@ -12,6 +12,7 @@ import {
 import { formatHour, parseTimeToHours } from '../../utils/time'
 import { PlusIcon, XIcon, UsersIcon, CalendarIcon, ActivityIcon, ChevronRightIcon } from '../icons'
 import CoordinatorCard from './CoordinatorCard'
+import InfoPanel from '../InfoPanel'
 
 const DAY_INDEX = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 }
 const PERMISSION_LABELS = { owner: 'Owner', can_edit: 'Can edit', view_only: 'View only' }
@@ -520,9 +521,9 @@ export default function FamilyAccessPanel({
   return (
     <div className="space-y-6">
       {readOnly && (
-        <div className="bg-sage-50 p-3.5 text-sm font-medium text-ink/70 shadow-card">
+        <InfoPanel className="p-3.5 text-sm font-medium shadow-card">
           You have view-only access — ask {familyMembers.find((f) => f.permission === 'owner')?.name} to make changes.
-        </div>
+        </InfoPanel>
       )}
 
       <section>

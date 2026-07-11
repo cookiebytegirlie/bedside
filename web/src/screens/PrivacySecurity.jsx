@@ -1,7 +1,8 @@
 import { Link, useParams } from 'react-router-dom'
 import { useHousehold } from '../state/HouseholdContext'
 import { formatWindow } from '../utils/time'
-import TopBar from '../components/TopBar'
+import OnDutyHeader from '../components/OnDutyHeader'
+import InfoPanel from '../components/InfoPanel'
 import { ShieldIcon, ArrowLeftIcon, ActivityIcon } from '../components/icons'
 
 const PROTECTED_NOW = [
@@ -61,8 +62,13 @@ export default function PrivacySecurity() {
 
   return (
     <>
-      <TopBar title="Privacy & security" subtitle="What's protecting this demo, and what's next" />
+      <OnDutyHeader />
       <main className="flex-1 px-5 py-5">
+        <div className="mb-5 text-center">
+          <h1 className="text-2xl font-bold text-ink">Privacy & security</h1>
+          <p className="mt-1 text-sm font-semibold text-muted">What's protecting this demo, and what's next</p>
+        </div>
+
         {!activeProfile && (
           <Link
             to={`/household/${householdId}`}
@@ -73,15 +79,15 @@ export default function PrivacySecurity() {
           </Link>
         )}
 
-        <div className="flex items-start gap-3 rounded-4xl bg-sage-50 p-5 shadow-card">
+        <InfoPanel className="flex items-start gap-3 p-5 shadow-card">
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-mist text-white">
             <ShieldIcon width={18} height={18} strokeWidth={2} />
           </span>
-          <p className="text-base font-medium leading-snug text-ink/80">
+          <p className="text-base font-medium leading-snug">
             Bedside is a prototype. It's built with real privacy and security practices in mind, but it has not been
             certified, audited, or deployed with real patient data. Here's exactly where that line is.
           </p>
-        </div>
+        </InfoPanel>
 
         <section className="mt-6">
           <h2 className="mb-2 text-xl font-bold text-ink">Protected right now</h2>

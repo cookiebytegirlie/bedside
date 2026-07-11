@@ -44,8 +44,8 @@ function StaffOnly({ householdId }) {
   return (
     <>
       <OnDutyHeader />
-      <main className="bg-household flex-1 px-5 pt-6">
-        <div className="rounded-[7px] bg-white p-6 text-center shadow-card">
+      <main className="bg-white flex-1 px-5 pt-6">
+        <div className="rounded-[8px] bg-white p-6 text-center shadow-card">
           <span className="mx-auto mb-2 flex h-11 w-11 items-center justify-center rounded-full bg-sage-100 text-mist">
             <LockIcon width={20} height={20} strokeWidth={2} />
           </span>
@@ -90,8 +90,8 @@ export default function ClinicalRequest() {
     return (
       <>
         <OnDutyHeader />
-        <main className="bg-household flex-1 px-5 pt-6">
-          <div className="rounded-[7px] bg-white p-6 text-center shadow-card">
+        <main className="bg-white flex-1 px-5 pt-6">
+          <div className="rounded-[8px] bg-white p-6 text-center shadow-card">
             <span className="mx-auto mb-2 flex h-11 w-11 items-center justify-center rounded-full bg-routine-bg text-routine-fg">
               <CheckIcon width={22} height={22} strokeWidth={2.5} />
             </span>
@@ -115,7 +115,7 @@ export default function ClinicalRequest() {
   return (
     <>
       <OnDutyHeader />
-      <main className="bg-household flex-1 px-5 pb-8 pt-6">
+      <main className="bg-white flex-1 px-5 pb-8 pt-6">
         <Link
           to={`/household/${householdId}/settings`}
           aria-label="Back"
@@ -127,7 +127,7 @@ export default function ClinicalRequest() {
         <h1 className="text-2xl font-bold text-ink">{config.title}</h1>
         <p className="mb-4 text-[13px] font-semibold text-muted">{config.subtitle}</p>
 
-        <div className="mb-5 flex items-start gap-2.5 rounded-[7px] bg-[#e8f0fb] p-4">
+        <div className="mb-5 flex items-start gap-2.5 rounded-[8px] bg-[#e8f0fb] p-4">
           <InfoIcon width={17} height={17} strokeWidth={2} className="mt-0.5 shrink-0 text-[#2b64c4]" />
           <p className="text-[13px] font-medium leading-snug text-[#2b64c4]">{config.info}</p>
         </div>
@@ -137,7 +137,7 @@ export default function ClinicalRequest() {
           onChange={(e) => setText(e.target.value)}
           rows={5}
           placeholder={config.placeholder}
-          className="mb-5 w-full resize-none rounded-[7px] border border-sage-200 bg-white p-3 text-[14px] font-medium text-ink placeholder:text-ink/40 focus:border-mist focus:outline-none"
+          className="mb-5 w-full resize-none rounded-[8px] border border-sage-200 bg-white p-3 text-[14px] font-medium text-ink placeholder:text-ink/40 focus:border-mist focus:outline-none"
         />
 
         <button

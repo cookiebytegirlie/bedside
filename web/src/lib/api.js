@@ -36,6 +36,16 @@ function mockResponse(transcript) {
   const lower = text.toLowerCase()
   const mentionsMed = /morphine|lorazepam|tylenol|acetaminophen|meds?|medication|dose/.test(lower)
   const condensed = text.length > 150 ? text.slice(0, 147).trimEnd() + '…' : text || 'Quiet shift, nothing eventful to report.'
+  const matchedRed = RED_KEYWORDS.find((k) => lower.includes(k))
+  const matchedYellow = YELLOW_KEYWORDS.find((k) => lower.includes(k))
+  // Plain-language trace of which keyword(s) drove the urgency/mood call, so
+  // the "How we know this" disclosure can show its work instead of just an
+  // opaque badge.
+  const reasoning = matchedRed
+    ? `Your note included the phrase "${matchedRed}", which matches this system's list of urgent/emergency terms (falls, bleeding, breathing trouble, chest pain, seizure, and similar). A match on that list auto-flags the entry red for immediate review — it's a keyword trigger, not a clinical judgment, so a nurse should still confirm what happened.`
+    : matchedYellow
+      ? `Your note included the phrase "${matchedYellow}", which matches this system's "worth watching" list (pain, agitation, appetite or breathing changes, and similar). That's why this was flagged yellow instead of left routine — it's a signal to keep an eye on things, not a confirmed problem.`
+      : "None of this system's urgent or watch-list keywords appeared in your note, so it was left as routine. That reflects the wording used, not a clinical assessment — please still flag anything that felt off."
 
   return {
     id: `mock-${Math.random().toString(36).slice(2, 10)}`,
@@ -59,6 +69,7 @@ function mockResponse(transcript) {
     // Very short or vague notes come back low-confidence, to exercise the
     // "AI unsure — please confirm" path in the UI.
     confidence: text.length < 25 ? 'low' : 'medium',
+    reasoning,
     _fallback: true,
   }
 }
@@ -84,7 +95,113 @@ function normalize(data, transcript) {
       : [],
     flag_for_next: d.flag_for_next ?? null,
     confidence,
+    reasoning: typeof d.reasoning === 'string' ? d.reasoning : '',
     _fallback: false,
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Visit digest — "Since your last visit"
+//
+// fetchVisitDigest() -> Promise<VisitDigest>
+//
+// Calls the get-trends Edge Function, which reads the shift-log table itself
+// (no params) and reasons across every entry to produce the digest. That agent
+// pass takes ~20-30s, so callers must show a graceful loading state.
+//
+// The function returns { needs_you[], pattern, whats_changed[], whats_working[] };
+// we map it onto the shape VisitDigestModal already renders. On any failure it
+// resolves to the hardcoded `visitDigest` fallback (carrying `_fallback: true`)
+// so the demo never shows an empty screen (spec requirement 7).
+import { visitDigest as fallbackDigest } from '../mockData'
+
+const CHANGE_ICON_BY_DIRECTION = { up: 'trend-up', down: 'trend-down', shift: 'moon' }
+
+function asText(item) {
+  if (typeof item === 'string') return item
+  if (item && typeof item === 'object') return String(item.text ?? item.detail ?? item.summary ?? '')
+  return ''
+}
+
+// Best-effort read of whether an intervention helped, from a free-text outcome
+// plus an optional count, mapped to the three states the WorkingRow renders.
+function workingStatus(outcome, count) {
+  const o = String(outcome || '').toLowerCase()
+  if (/mixed|sometimes|inconsistent|varied|partial/.test(o)) return 'mixed'
+  if (count === 0 || /\bno\b|didn'?t|did not|not help|unhelpful|ineffective/.test(o)) return 'no'
+  return 'yes'
+}
+
+function arr(v) {
+  return Array.isArray(v) ? v : []
+}
+
+function normalizeDigest(data) {
+  const d = data || {}
+
+  // The endpoint is documented as { needs_you, pattern, whats_changed,
+  // whats_working } but the deployed function has also been seen returning
+  // { trends, patterns, flags }. Accept either so we render whatever it emits.
+  const needsList = [...arr(d.needs_you), ...arr(d.flags)].map(asText).filter(Boolean)
+  const patternText = [asText(d.pattern), ...arr(d.patterns).map(asText)].filter(Boolean).join(' ')
+
+  const changed = [...arr(d.whats_changed), ...arr(d.trends)]
+    .map((c) => ({
+      icon: CHANGE_ICON_BY_DIRECTION[c?.direction] || 'trend-down',
+      title: String(c?.title ?? c?.label ?? '').trim(),
+      detail: String(c?.detail ?? c?.description ?? asText(c)).trim(),
+    }))
+    .filter((c) => c.title)
+
+  const working = arr(d.whats_working)
+    .map((w) => {
+      const intervention = String(w?.intervention ?? '').trim()
+      const outcome = String(w?.outcome ?? '').trim()
+      const count = typeof w?.worked_count === 'number' ? w.worked_count : undefined
+      const label = outcome ? `${intervention} — ${outcome}` : intervention
+      return { status: workingStatus(outcome, count), label }
+    })
+    .filter((w) => w.label)
+
+  // If the agent returned nothing usable, fall back rather than show blanks.
+  if (!needsList.length && !patternText && !changed.length && !working.length) {
+    return { ...fallbackDigest, _fallback: true }
+  }
+
+  return {
+    lastVisit: fallbackDigest.lastVisit,
+    needsYou: needsList.length
+      ? { clinicalOnly: true, count: needsList.length, text: needsList.join(' '), cta: fallbackDigest.needsYou.cta }
+      : fallbackDigest.needsYou,
+    pattern: patternText ? { sensitive: true, text: patternText } : fallbackDigest.pattern,
+    changed: changed.length ? changed : fallbackDigest.changed,
+    working: working.length ? working : fallbackDigest.working,
+    _fallback: false,
+  }
+}
+
+export async function fetchVisitDigest() {
+  if (!isBackendConfigured()) {
+    // No key yet — keep a brief "reasoning" beat so the loading state is
+    // visible, then hand back the hardcoded digest.
+    await new Promise((r) => setTimeout(r, 1400))
+    return { ...fallbackDigest, _fallback: true }
+  }
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/get-trends`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: ANON_KEY,
+        Authorization: `Bearer ${ANON_KEY}`,
+      },
+      body: JSON.stringify({}),
+    })
+    if (!res.ok) throw new Error(`get-trends returned HTTP ${res.status}`)
+    return normalizeDigest(await res.json())
+  } catch (err) {
+    console.warn('[fetchVisitDigest] falling back to hardcoded digest:', err?.message || err)
+    return { ...fallbackDigest, _fallback: true }
   }
 }
 

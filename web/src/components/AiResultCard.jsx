@@ -7,6 +7,8 @@ import {
   FlagIcon,
   InfoIcon,
 } from './icons'
+import AiSourceDisclosure from './AiSourceDisclosure'
+import InfoPanel from './InfoPanel'
 
 // Visual spec for each urgency — icon + label so it's never color-alone.
 const URGENCY = {
@@ -63,10 +65,10 @@ export default function AiResultCard({ transcript, result, seeMeds = true }) {
   const lowConfidence = result.confidence === 'low'
 
   return (
-    <div className={`rounded-[7px] bg-white p-4 shadow-card ${lowConfidence ? 'ring-2 ring-watch-fg/50' : ''}`}>
+    <div className={`rounded-[8px] bg-white p-4 shadow-card ${lowConfidence ? 'ring-2 ring-watch-fg/50' : ''}`}>
       {/* Low-confidence: frame the whole card as unconfirmed rather than fact */}
       {lowConfidence && (
-        <div className="mb-3 flex items-start gap-2 rounded-[5px] bg-watch-bg p-3">
+        <div className="mb-3 flex items-start gap-2 rounded-[8px] bg-watch-bg p-3">
           <AlertTriangleIcon width={16} height={16} strokeWidth={2} className="mt-0.5 shrink-0 text-watch-fg" />
           <p className="text-[13px] font-semibold leading-snug text-watch-fg">
             AI unsure — please confirm before saving. Read your own words below and correct anything that’s off.
@@ -76,9 +78,9 @@ export default function AiResultCard({ transcript, result, seeMeds = true }) {
 
       {/* Raw transcript at the top */}
       <p className="text-[11px] font-bold uppercase tracking-wide text-muted">What you said</p>
-      <p className="mt-1 rounded-[5px] bg-sage-50 p-3 text-[13px] font-medium italic leading-snug text-ink/70">
+      <InfoPanel as="p" id="ai-transcript-quote" className="mt-1 p-3 text-[13px] font-medium italic leading-snug">
         “{transcript}”
-      </p>
+      </InfoPanel>
 
       {/* Summary + urgency */}
       <div className="mt-3 flex items-start justify-between gap-3">
@@ -93,6 +95,13 @@ export default function AiResultCard({ transcript, result, seeMeds = true }) {
       {result.urgency_reason && (
         <p className="mt-1.5 text-[13px] font-medium leading-snug text-ink/60">{result.urgency_reason}</p>
       )}
+
+      <AiSourceDisclosure
+        reasoning={result.reasoning}
+        source="Your shift note (see “What you said” above)"
+        sourceHref="#ai-transcript-quote"
+        confidence={result.confidence}
+      />
 
       <div className="mt-4 space-y-3">
         {result.mood && (

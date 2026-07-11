@@ -334,11 +334,15 @@ function CodeGuestStep({ onBack }) {
 
   return (
     <div className="w-full">
-      <button type="button" onClick={onBack} className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-muted">
-        <ArrowLeftIcon width={16} height={16} strokeWidth={2} />
-        Choose someone else
+      <button
+        type="button"
+        onClick={onBack}
+        aria-label="Back"
+        className="absolute left-4 top-[calc(env(safe-area-inset-top)+1rem)] flex h-9 w-9 items-center justify-center text-muted active:scale-[0.94]"
+      >
+        <ArrowLeftIcon width={22} height={22} strokeWidth={2} />
       </button>
-      <p className="mb-1 text-xl font-bold text-ink">Covering a shift tonight?</p>
+      <p className="mb-1 mt-12 text-xl font-bold text-ink">Covering a shift tonight?</p>
       <p className="mb-3 text-sm font-semibold text-muted">
         Enter your name and the code your coordinator sent you. It only works during this slot.
       </p>
@@ -381,12 +385,16 @@ function CodeGuestStep({ onBack }) {
 function TimeBlockedStep({ label, startHour, endHour, onRecheck, onBack }) {
   return (
     <div className="w-full">
-      <button type="button" onClick={onBack} className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-muted">
-        <ArrowLeftIcon width={16} height={16} strokeWidth={2} />
-        Choose someone else
+      <button
+        type="button"
+        onClick={onBack}
+        aria-label="Back"
+        className="absolute left-4 top-[calc(env(safe-area-inset-top)+1rem)] flex h-9 w-9 items-center justify-center text-muted active:scale-[0.94]"
+      >
+        <ArrowLeftIcon width={22} height={22} strokeWidth={2} />
       </button>
 
-      <div className="rounded-3xl bg-white p-5 text-center shadow-card">
+      <div className="mt-12 rounded-3xl bg-white p-5 text-center shadow-card">
         <span className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-watch-bg text-watch-fg">
           <ClockIcon width={19} height={19} strokeWidth={2} />
         </span>

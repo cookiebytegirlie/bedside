@@ -49,15 +49,14 @@ export default {
         card: '0px 20px 44px -10px rgba(40, 37, 34, 0.10)',
       },
       borderRadius: {
-        // Near-square widgets — just enough softening to not look
-        // sharp-cut. rounded-full (avatars, chips, pill buttons) is
-        // untouched since those are meant to be fully circular/pill-shaped,
-        // not "widget corners".
-        xl: '2px',
-        '2xl': '2px',
-        '3xl': '2px',
-        '4xl': '2px',
-        '5xl': '2px',
+        // Uniform widget/card corner radius across the site. rounded-full
+        // (avatars, chips, pill buttons) is untouched since those are meant
+        // to be fully circular/pill-shaped, not "widget corners".
+        xl: '8px',
+        '2xl': '8px',
+        '3xl': '8px',
+        '4xl': '8px',
+        '5xl': '8px',
       },
     },
   },

@@ -6,6 +6,7 @@ import { canSeeMeds } from '../utils/roles'
 import OnDutyHeader from '../components/OnDutyHeader'
 import UrgencyPicker from '../components/UrgencyPicker'
 import AiResultCard from '../components/AiResultCard'
+import EscalationFlow from '../components/EscalationFlow'
 import { MicIcon, PillIcon, RefreshIcon, CheckIcon } from '../components/icons'
 
 const ACTIVITY_OPTIONS = ['Sleeping', 'Relaxing', 'Eating', 'Activity']
@@ -169,13 +170,13 @@ function MedsSection({ sessionId, urgency }) {
 }
 
 function NotesSection({ sessionId }) {
-  const { addLog, activeProfile } = useHousehold()
+  const { addLog, activeProfile, contacts } = useHousehold()
   const seeMeds = canSeeMeds(activeProfile?.role)
   const isVolunteerAide = /volunteer|aide/i.test(activeProfile?.role || '')
   const [transcript, setTranscript] = useState('')
   const [stage, setStage] = useState('idle') // idle | processing | result | saved
   const [result, setResult] = useState(null)
-  const [escalation, setEscalation] = useState(null) // null | 'notifying' | 'notified'
+  const [escalated, setEscalated] = useState(false) // set once the nurse has been notified
   const { listening, supported, toggle } = useSpeechRecognition(setTranscript)
 
   const process = async () => {
@@ -183,20 +184,14 @@ function NotesSection({ sessionId }) {
     setStage('processing')
     const res = await summarizeShiftNote(transcript)
     setResult(res)
+    setEscalated(false)
     setStage('result')
-    // Red urgency → auto-escalate to the on-call nurse (two-step animation).
-    if (res.urgency === 'red') {
-      setEscalation('notifying')
-      setTimeout(() => setEscalation('notified'), 1800)
-    } else {
-      setEscalation(null)
-    }
   }
 
   const reset = () => {
     setTranscript('')
     setResult(null)
-    setEscalation(null)
+    setEscalated(false)
     setStage('idle')
   }
 
@@ -215,6 +210,11 @@ function NotesSection({ sessionId }) {
         seeMeds && result.medications[0]
           ? { name: result.medications[0].name, time: result.medications[0].time, dose: '', route: '', reason: '' }
           : undefined,
+      // Stamp the escalation onto the entry so the Timeline can show the
+      // "nurse notified automatically" line for this moment.
+      ...(escalated
+        ? { escalatedAt: new Date().toISOString(), escalatedTo: contacts.hospiceTeam[0].name }
+        : {}),
     })
     setStage('saved')
     setTimeout(reset, 1500)
@@ -225,7 +225,7 @@ function NotesSection({ sessionId }) {
       <h2 className="text-xl font-bold text-ink">Notes</h2>
 
       {stage === 'idle' && (
-        <div className="mt-3 rounded-[7px] bg-white p-5 shadow-card">
+        <div className="mt-3 rounded-[8px] bg-white p-5 shadow-card">
           <div className="flex items-center gap-3">
             <button
               type="button"
@@ -250,7 +250,7 @@ function NotesSection({ sessionId }) {
             onChange={(e) => setTranscript(e.target.value)}
             placeholder="Example: Ellie was restless before bed and short of breath. Repositioned and gave PRN morphine; settled within twenty minutes."
             rows={4}
-            className="mt-4 w-full resize-none rounded-[5px] border border-sage-200 bg-transparent p-3 text-base font-medium text-ink placeholder:text-ink/40 focus:border-mist focus:outline-none"
+            className="mt-4 w-full resize-none rounded-[8px] border border-sage-200 bg-transparent p-3 text-base font-medium text-ink placeholder:text-ink/40 focus:border-mist focus:outline-none"
           />
           <p className="mt-3 text-center text-xs leading-snug text-ink/35">
             Voice notes are processed by your browser's speech service. This demo uses synthetic data only — a real
@@ -268,7 +268,7 @@ function NotesSection({ sessionId }) {
       )}
 
       {stage === 'processing' && (
-        <div className="mt-3 flex items-center gap-3 rounded-[7px] bg-white p-5 shadow-card">
+        <div className="mt-3 flex items-center gap-3 rounded-[8px] bg-white p-5 shadow-card">
           <RefreshIcon width={22} height={22} strokeWidth={2} className="shrink-0 animate-spin text-mist" />
           <p className="text-base font-semibold text-ink">Summarizing with Bedside AI…</p>
         </div>
@@ -276,24 +276,17 @@ function NotesSection({ sessionId }) {
 
       {stage === 'result' && result && (
         <div className="mt-3 space-y-3">
-          {result.urgency === 'red' && escalation && (
-            <div
-              className={`flex items-center gap-2 rounded-[7px] p-3.5 ${
-                escalation === 'notified' ? 'bg-routine-bg text-routine-fg' : 'bg-attention-bg text-attention-fg'
-              }`}
-            >
-              {escalation === 'notifying' ? (
-                <RefreshIcon width={18} height={18} strokeWidth={2.5} className="shrink-0 animate-spin" />
-              ) : (
-                <CheckIcon width={18} height={18} strokeWidth={3} className="shrink-0" />
-              )}
-              <p className="text-[15px] font-bold">
-                {escalation === 'notifying' ? 'Notifying on-call nurse…' : 'Nurse notified ✓'}
-              </p>
-            </div>
-          )}
-
           <AiResultCard transcript={transcript} result={result} seeMeds={seeMeds} />
+
+          {result.urgency === 'red' && (
+            <EscalationFlow
+              trigger={{
+                quote: transcript,
+                reasonLine: result.urgency_reason || 'This looks urgent — surfaced for immediate review.',
+              }}
+              onNotified={() => setEscalated(true)}
+            />
+          )}
 
           <div className="flex gap-2">
             <button
@@ -315,7 +308,7 @@ function NotesSection({ sessionId }) {
       )}
 
       {stage === 'saved' && (
-        <div className="mt-3 flex items-center gap-2 rounded-[7px] bg-routine-bg p-4 text-routine-fg">
+        <div className="mt-3 flex items-center gap-2 rounded-[8px] bg-routine-bg p-4 text-routine-fg">
           <CheckIcon width={18} height={18} strokeWidth={3} className="shrink-0" />
           <p className="text-[15px] font-bold">Saved to the timeline</p>
         </div>
@@ -345,6 +338,22 @@ export default function LogShift() {
           <p className="mb-2 text-sm font-bold text-ink">Flag this entry</p>
           <UrgencyPicker value={flag} onChange={setFlag} />
         </div>
+
+        {/* Manually flagging the whole entry "Needs attention" escalates the
+            same way a red-flagged note does — even for a status/meds-only entry
+            with no dictated note. The status/meds taps below already carry the
+            red urgency onto their Timeline entries. */}
+        {flag === 'red' && (
+          <div className="mb-6">
+            <EscalationFlow
+              trigger={{
+                quote: "I'm flagging this as needs attention.",
+                reasonLine:
+                  'You marked this entry “Needs attention,” so the on-call nurse is being looped in automatically.',
+              }}
+            />
+          </div>
+        )}
 
         <StatusSection sessionId={sessionIdRef.current} urgency={flag} />
         {canGiveMeds && <MedsSection sessionId={sessionIdRef.current} urgency={flag} />}

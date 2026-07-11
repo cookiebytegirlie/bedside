@@ -70,7 +70,7 @@ function OutcomeRow({ value, onPick }) {
             key={o.key}
             type="button"
             onClick={() => onPick(active ? null : o.key)}
-            className={`flex items-center justify-center gap-1 rounded-[5px] px-2 py-2 text-[13px] font-semibold transition-colors active:scale-[0.98] ${
+            className={`flex items-center justify-center gap-1 rounded-[8px] px-2 py-2 text-[13px] font-semibold transition-colors active:scale-[0.98] ${
               active ? `${o.activeBg} text-ink` : 'border border-sage-200 bg-white text-muted'
             }`}
           >
@@ -130,7 +130,17 @@ export default function ShiftEnd() {
       bits.join(' ') ||
       `Quiet shift — ${household.preferredName} was ${(statusChoice || status).toLowerCase()}, nothing eventful to hand off.`
 
-    addLog({ author: activeProfile?.name ?? 'You', type: 'shift-note', summary, urgency, sessionId })
+    // Keep the flattened summary (above) for the current Timeline, but also
+    // pass the structured outcomes through so a redesigned card can render
+    // per-measure "helped / didn't" rows. `tried` is [{ name, outcome }].
+    addLog({
+      author: activeProfile?.name ?? 'You',
+      type: 'shift-note',
+      summary,
+      urgency,
+      sessionId,
+      ...(tried.length ? { tried } : {}),
+    })
     switchProfile()
     navigate(`/household/${householdId}`)
   }
@@ -164,7 +174,7 @@ export default function ShiftEnd() {
                   key={opt}
                   type="button"
                   onClick={() => setStatusChoice(active ? null : opt)}
-                  className={`rounded-[7px] px-3 py-3 text-center text-sm font-bold shadow-card transition-colors active:scale-[0.98] ${
+                  className={`rounded-[8px] px-3 py-3 text-center text-sm font-bold shadow-card transition-colors active:scale-[0.98] ${
                     active ? 'bg-routine-bg text-ink' : 'bg-white text-ink'
                   }`}
                 >
@@ -181,14 +191,14 @@ export default function ShiftEnd() {
           <p className="mb-3 text-[11px] font-semibold text-muted/80">From {preferred}'s care plan</p>
           <div className="space-y-2.5">
             {measures.map((m) => (
-              <div key={m} className="rounded-[7px] bg-white p-4 shadow-card">
+              <div key={m} className="rounded-[8px] bg-white p-4 shadow-card">
                 <p className="text-base font-bold text-ink">{m}</p>
                 <OutcomeRow value={outcomes[m]} onPick={(v) => setOutcomes((o) => ({ ...o, [m]: v }))} />
               </div>
             ))}
 
             {custom.map((c) => (
-              <div key={c.id} className="rounded-[7px] bg-white p-4 shadow-card">
+              <div key={c.id} className="rounded-[8px] bg-white p-4 shadow-card">
                 <input
                   autoFocus
                   value={c.name}
@@ -232,7 +242,7 @@ export default function ShiftEnd() {
             </button>
             <p className="text-base font-bold text-ink">Tell the next person</p>
           </div>
-          <div className="rounded-[7px] bg-white p-4 shadow-card">
+          <div className="rounded-[8px] bg-white p-4 shadow-card">
             <p className="mb-2 text-[13px] font-medium leading-snug text-muted">
               How was she? What did you try? Anything they should know?
             </p>
@@ -241,13 +251,13 @@ export default function ShiftEnd() {
               onChange={(e) => setNote(e.target.value)}
               rows={4}
               placeholder="She was restless around 2, I tried the lavender and it settled her a bit…"
-              className="w-full resize-none rounded-[5px] border border-sage-200 bg-transparent p-3 text-[13px] font-medium text-ink placeholder:text-ink/40 focus:border-mist focus:outline-none"
+              className="w-full resize-none rounded-[8px] border border-sage-200 bg-transparent p-3 text-[13px] font-medium text-ink placeholder:text-ink/40 focus:border-mist focus:outline-none"
             />
           </div>
         </section>
 
         {/* Concerns — softly highlighted, drives the entry's urgency flag */}
-        <section className="mb-6 rounded-[7px] bg-watch-bg p-4">
+        <section className="mb-6 rounded-[8px] bg-watch-bg p-4">
           <div className="mb-2 flex items-center gap-2 text-watch-fg">
             <AlertTriangleIcon width={18} height={18} strokeWidth={2} />
             <p className="text-base font-bold">Anything worrying you?</p>
@@ -257,7 +267,7 @@ export default function ShiftEnd() {
             onChange={(e) => setConcerns(e.target.value)}
             rows={3}
             placeholder="It's okay to say you're not sure."
-            className="w-full resize-none rounded-[5px] border border-watch-fg/30 bg-white p-3 text-[13px] font-medium text-ink placeholder:text-ink/40 focus:border-watch-fg focus:outline-none"
+            className="w-full resize-none rounded-[8px] border border-watch-fg/30 bg-white p-3 text-[13px] font-medium text-ink placeholder:text-ink/40 focus:border-watch-fg focus:outline-none"
           />
         </section>
 

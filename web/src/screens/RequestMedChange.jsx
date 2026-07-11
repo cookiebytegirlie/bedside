@@ -4,14 +4,15 @@ import { useHousehold } from '../state/HouseholdContext'
 import { authorizingPhysician, medRequestSupportingRecord, medFrequencyOptions } from '../mockData'
 import { isNurse } from '../utils/roles'
 import OnDutyHeader from '../components/OnDutyHeader'
+import InfoPanel from '../components/InfoPanel'
 import { ArrowLeftIcon, InfoIcon, SparklesIcon, SendIcon, PaperclipIcon, ClockIcon, LockIcon, PillIcon } from '../components/icons'
 
 function NurseOnly({ householdId }) {
   return (
     <>
       <OnDutyHeader />
-      <main className="bg-household flex-1 px-5 pt-6">
-        <div className="rounded-[7px] bg-white p-6 text-center shadow-card">
+      <main className="bg-white flex-1 px-5 pt-6">
+        <div className="rounded-[8px] bg-white p-6 text-center shadow-card">
           <span className="mx-auto mb-2 flex h-11 w-11 items-center justify-center rounded-full bg-sage-100 text-mist">
             <LockIcon width={20} height={20} strokeWidth={2} />
           </span>
@@ -65,11 +66,11 @@ export default function RequestMedChange() {
     return (
       <>
         <OnDutyHeader />
-        <main className="bg-household flex-1 px-5 pb-8 pt-6">
+        <main className="bg-white flex-1 px-5 pb-8 pt-6">
           <h1 className="text-2xl font-bold text-ink">{household.preferredName}’s record</h1>
           <p className="mb-4 text-[13px] font-semibold text-muted">Pending physician review</p>
 
-          <div className="rounded-[7px] bg-watch-bg p-4">
+          <div className="rounded-[8px] bg-watch-bg p-4">
             <div className="mb-1 flex items-center gap-2 text-watch-fg">
               <ClockIcon width={16} height={16} strokeWidth={2} />
               <p className="text-[13px] font-bold">Awaiting {authorizingPhysician}</p>
@@ -81,7 +82,7 @@ export default function RequestMedChange() {
 
           <h2 className="mb-2 mt-6 text-xl font-bold text-ink">Logged automatically</h2>
           <div className="space-y-3">
-            <div className="rounded-[7px] border-l-4 border-mist bg-white p-4 shadow-card">
+            <div className="rounded-[8px] border-l-4 border-mist bg-white p-4 shadow-card">
               <p className="text-[12px] font-semibold text-muted">{sent.time} · {activeProfile?.name} · Nurse</p>
               <p className="mt-1 text-[14px] font-medium leading-snug text-ink">
                 Requested {med.name} titration to {proposed}. Rationale: {rationale.trim()}
@@ -92,7 +93,7 @@ export default function RequestMedChange() {
               </span>
             </div>
 
-            <div className="rounded-[7px] border-l-4 border-attention-fg bg-white p-4 shadow-card">
+            <div className="rounded-[8px] border-l-4 border-attention-fg bg-white p-4 shadow-card">
               <p className="text-[12px] font-semibold text-muted">2:04am · Lauren T. · Volunteer</p>
               <p className="mt-1 text-[14px] font-medium leading-snug text-ink">
                 Labored breathing and pain. Family gave comfort meds; they didn’t help.
@@ -104,13 +105,13 @@ export default function RequestMedChange() {
             </div>
           </div>
 
-          <div className="mt-5 flex items-start gap-2 rounded-[7px] bg-sage-50 p-4">
+          <InfoPanel className="mt-5 flex items-start gap-2 p-4">
             <LockIcon width={15} height={15} strokeWidth={2} className="mt-0.5 shrink-0 text-mist" />
-            <p className="text-[12px] font-medium leading-snug text-ink/60">
+            <p className="text-[12px] font-medium leading-snug">
               Under standing comfort-care orders, titration within an approved range may be delegated to the RN.
               Bedside models the conservative path — every change is physician-authorized and documented.
             </p>
-          </div>
+          </InfoPanel>
 
           <Link
             to={`/household/${householdId}`}
@@ -126,7 +127,7 @@ export default function RequestMedChange() {
   return (
     <>
       <OnDutyHeader />
-      <main className="bg-household flex-1 px-5 pb-8 pt-6">
+      <main className="bg-white flex-1 px-5 pb-8 pt-6">
         <Link
           to={`/household/${householdId}/settings`}
           aria-label="Back"
@@ -138,7 +139,7 @@ export default function RequestMedChange() {
         <h1 className="text-2xl font-bold text-ink">Request medication change</h1>
         <p className="mb-4 text-[13px] font-semibold text-muted">Goes to {authorizingPhysician} for authorization</p>
 
-        <div className="mb-5 flex items-start gap-2.5 rounded-[7px] bg-[#e8f0fb] p-4">
+        <div className="mb-5 flex items-start gap-2.5 rounded-[8px] bg-[#e8f0fb] p-4">
           <InfoIcon width={17} height={17} strokeWidth={2} className="mt-0.5 shrink-0 text-[#2b64c4]" />
           <p className="text-[13px] font-medium leading-snug text-[#2b64c4]">
             You can’t change dosing or frequency directly. This sends a documented request to the physician.
@@ -146,7 +147,7 @@ export default function RequestMedChange() {
         </div>
 
         <label className="mb-1.5 block text-sm font-semibold text-muted">Medication</label>
-        <div className="mb-5 flex items-center gap-3 rounded-[7px] bg-white p-4 shadow-card">
+        <div className="mb-5 flex items-center gap-3 rounded-[8px] bg-white p-4 shadow-card">
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-clay-50 text-clay-500">
             <PillIcon width={17} height={17} strokeWidth={2} />
           </span>
@@ -166,12 +167,12 @@ export default function RequestMedChange() {
 
         <label className="mb-1.5 block text-sm font-semibold text-muted">Requesting</label>
         <div className="mb-5 flex items-center gap-2">
-          <div className="flex-1 rounded-[7px] bg-white p-3 text-center shadow-card">
+          <div className="flex-1 rounded-[8px] bg-white p-3 text-center shadow-card">
             <p className="text-[11px] font-bold uppercase tracking-wide text-muted">Current</p>
             <p className="mt-0.5 text-[14px] font-bold leading-tight text-ink">{med.schedule}</p>
           </div>
           <span className="shrink-0 text-mist">→</span>
-          <div className="flex-1 rounded-[7px] bg-routine-bg p-3 text-center">
+          <div className="flex-1 rounded-[8px] bg-routine-bg p-3 text-center">
             <p className="text-[11px] font-bold uppercase tracking-wide text-routine-fg">Proposed</p>
             <select
               value={proposed}
@@ -185,20 +186,20 @@ export default function RequestMedChange() {
           </div>
         </div>
 
-        <div className="mb-5 rounded-[7px] bg-sage-50 p-4">
+        <InfoPanel className="mb-5 p-4">
           <div className="mb-2 flex items-center gap-1.5 text-muted">
             <SparklesIcon width={15} height={15} strokeWidth={2} />
             <p className="text-[12px] font-bold">Bedside attached the supporting record</p>
           </div>
           <ul className="space-y-1">
             {medRequestSupportingRecord.map((r) => (
-              <li key={r} className="flex gap-1.5 text-[13px] font-medium text-ink/70">
+              <li key={r} className="flex gap-1.5 text-[13px] font-medium">
                 <span className="text-mist">·</span>
                 {r}
               </li>
             ))}
           </ul>
-        </div>
+        </InfoPanel>
 
         <label className="mb-1.5 block text-sm font-semibold text-muted">
           Required — your clinical rationale
@@ -208,7 +209,7 @@ export default function RequestMedChange() {
           onChange={(e) => setRationale(e.target.value)}
           rows={4}
           placeholder="Breakthrough dosing frequency increasing; requesting titration. Monitor for oversedation."
-          className="mb-5 w-full resize-none rounded-[7px] border border-sage-200 bg-white p-3 text-[14px] font-medium text-ink placeholder:text-ink/40 focus:border-mist focus:outline-none"
+          className="mb-5 w-full resize-none rounded-[8px] border border-sage-200 bg-white p-3 text-[14px] font-medium text-ink placeholder:text-ink/40 focus:border-mist focus:outline-none"
         />
 
         <button
