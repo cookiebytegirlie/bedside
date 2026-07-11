@@ -1,9 +1,11 @@
 // Persistence for shift-note log entries, via Supabase's PostgREST API
 // (no @supabase/supabase-js dependency needed).
 //
-// Table: log_entry. The full AI response is stored in the `ai_response` jsonb
-// column; `transcript`, `summary`, and `urgency` are stored as top-level
-// columns for easy querying / urgency chips.
+// Table: log_entry (Michelle's schema — see spec section 10, with `ai_response`
+// in place of the spec's `ai_summary`). Actual columns, confirmed against the
+// live table: id, household_id, shift_id, timestamp, type, raw_text,
+// ai_response (jsonb), urgency_tag, logged_by. There is no top-level
+// `transcript`/`summary`/`urgency` column — those live inside `ai_response`.
 //
 // Everything here is best-effort: if the backend isn't configured or a call
 // fails, it degrades quietly (returns { ok:false } / []) so the in-memory
@@ -24,13 +26,15 @@ function restHeaders(extra = {}) {
 }
 
 // Persists one entry. `response` is the full AI response object.
-export async function saveLogEntry({ transcript, response }) {
+export async function saveLogEntry({ transcript, response, author }) {
   if (!isBackendConfigured()) return { ok: false, reason: 'not-configured' }
   const row = {
-    transcript,
-    summary: response?.summary ?? null,
-    urgency: response?.urgency ?? 'green',
+    type: 'note',
+    raw_text: transcript,
     ai_response: response,
+    urgency_tag: response?.urgency ?? 'green',
+    timestamp: new Date().toISOString(),
+    logged_by: author ?? null,
   }
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/log_entry`, {

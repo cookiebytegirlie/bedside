@@ -202,7 +202,7 @@ function NotesSection({ sessionId }) {
 
   const save = async () => {
     // Persist to Supabase (best-effort) and reflect on the in-memory timeline.
-    await saveLogEntry({ transcript, response: result })
+    await saveLogEntry({ transcript, response: result, author: activeProfile?.name })
     addLog({
       author: activeProfile?.name ?? 'You',
       type: isVolunteerAide ? 'skin-integrity' : 'shift-note',

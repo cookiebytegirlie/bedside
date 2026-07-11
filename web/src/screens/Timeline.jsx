@@ -15,18 +15,19 @@ import { PillIcon, UserIcon, BookIcon, ChevronRightIcon, SparklesIcon } from '..
 let digestAutoShown = false
 
 // Map a persisted Supabase log_entry row into the in-memory log shape the
-// Timeline renders, pulling structured fields out of the ai_response jsonb.
+// Timeline renders. Real columns: id, timestamp, type, raw_text, ai_response
+// (jsonb — summary/urgency/medications live here), urgency_tag, logged_by.
 function mapRemoteRow(row) {
   const ai = row.ai_response || {}
   const med = Array.isArray(ai.medications) ? ai.medications[0] : null
   return {
-    id: row.id ?? ai.id ?? `remote-${Math.random().toString(36).slice(2, 8)}`,
-    timestamp: row.timestamp ?? row.created_at ?? ai.timestamp ?? new Date().toISOString(),
-    author: row.author ?? 'Logged via Bedside',
+    id: row.id ?? `remote-${Math.random().toString(36).slice(2, 8)}`,
+    timestamp: row.timestamp ?? ai.timestamp ?? new Date().toISOString(),
+    author: row.logged_by ?? 'Logged via Bedside',
     type: 'shift-note',
-    summary: ai.summary ?? row.summary ?? row.transcript ?? '',
-    urgency: ai.urgency ?? row.urgency ?? 'green',
-    rawTranscript: row.transcript,
+    summary: ai.summary ?? row.raw_text ?? '',
+    urgency: row.urgency_tag ?? ai.urgency ?? 'green',
+    rawTranscript: row.raw_text,
     medicationGiven: med ? { name: med.name, time: med.time } : undefined,
   }
 }
