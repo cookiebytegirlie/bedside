@@ -1,38 +1,71 @@
-# Care plan - Bee at the Bluebird House
+# Care plan - Eleanor "Ellie" Voss
 
-## About Bee
+## About Ellie
 
-Bee is 84 and receiving hospice care at home. She spends most of the day in a hospital bed by the front window because she likes to watch the birds at the feeder. She responds to her name and to touch, but her speech is limited to a few words. She recognizes family and long-time visitors.
+Eleanor Voss is 84 and receiving hospice care at home. She prefers to be called "Ellie," not "Eleanor." She stays in the front bedroom on the west side of the house, and likes the armchair by the feeder window.
 
-She is not eating solid food. She takes small sips of thickened water when offered, and ice chips are welcome.
+She taught third grade for thirty-one years. She is warm, a little stubborn, and proud of her garden. Ask about her students or her garden and she lights up.
 
-Her favorite music is Nat King Cole. A playlist is loaded on the tablet by the bed.
+She is hard of hearing on her right side - sit on her left. She sometimes mixes up times or people. Go along with her gently; do not correct her sharply.
 
-## Comfort measures
+Code status: DNR (Do Not Resuscitate), on file with hospice.
+Allergies: Penicillin, Latex.
 
-- She calms most reliably to: quiet Nat King Cole, a warm washcloth on her forehead, and her granddaughter's crocheted blanket (yellow, folded on the chair).
-- She dislikes: bright overhead light after dark, cold hands, and being turned quickly.
-- If she is restless, try dim light, music, and a hand on her shoulder before anything else.
+## What calms her
+
+- Lavender hand lotion, massaged slowly - her most reliable comfort, especially in the evening.
+- Soft classical music in the afternoon. Big-band music in the evening.
+- Starting the music before dusk heads off her evening anxiety. Get ahead of it.
+- A warm blanket or quilt - she runs cold.
+- Narrating the birds at the feeder. She can't see them well anymore but loves hearing about them.
+- Reading the paper aloud, or looking through photo albums.
+- Dim lighting - lamp only in the evening.
+- If she is restless: dim the light, put on music, and a hand on her shoulder before anything else.
+
+## What to avoid
+
+- Overhead light - it hurts her eyes. No overhead lights after 7pm, lamp only.
+- Sudden bright light makes agitation worse.
+- Her left arm is tender - go slow on that side.
+- Mint or peppermint scents.
+- Never leave without telling her you'll be back.
+- Nothing cold in the evening. She has gone off cold foods and ice cream lately.
+- Do not turn or reposition her quickly.
+
+## Food and drink
+
+- Morning: applesauce or oatmeal, and lukewarm chamomile tea with honey.
+- Offer small sips of water often - she forgets to drink on her own.
+- Afternoon: not very hungry. Tea and a little fruit rather than a full meal.
+- Evening: something warm and easy - chamomile tea or warm milk. Nothing cold.
+- She may insist she has already eaten. Offer a few bites anyway, and try again later.
+- Offer, never push. If she declines, that is okay. Note it.
+
+## Her day
+
+- Morning - her best hours. Chatty and alert. She asks about her students.
+- Afternoon - quieter, often dozing. Armchair by the feeder window with her quilt.
+- Before 5:30pm - "the turn." She gets anxious as the light fades. Dim the lamps and start the music before it happens, not after she is already upset.
+- Evening - restless early, then settles. She wants comfort and reassurance.
+- Overnight - only mouth care and repositioning. Do not wake her for anything else.
+
+## Routines
+
 - Reposition every two hours to prevent pressure sores. Use a pillow between her knees when she is on her side.
-- Mouth care every two hours. Swabs are in the top drawer. Her mouth dries quickly.
+- Oral and mouth care after each meal. Her mouth dries quickly.
+- The family prefers a text update after every shift, even if the shift was uneventful.
 
 ## Medications
 
-Only family or the hospice nurse administers medication. Volunteers may note the time a family member gives a dose so it appears on the shift timeline, but do not handle medications yourself.
+Only family or the hospice nurse administers medication. Volunteers do not handle medications. A volunteer may note the time a family member gave a dose so it appears on the shift timeline, but volunteers never give medication themselves and never make decisions about it.
 
-Comfort medications kept at the bedside (locked box, key with the primary caregiver):
+Medications on the plan:
 
-- Morphine oral solution - for breakthrough pain or shortness of breath. Family may give per hospice instruction.
-- Lorazepam - for restlessness or anxiety. Family may give per hospice instruction.
-- Acetaminophen - for fever above 38.3 C (101 F).
+- Morphine (oral solution) - 5mg, every 4 hours as needed for pain or shortness of breath.
+- Lorazepam - 0.5mg, twice daily, morning and evening.
+- Senna-S - 2 tablets, nightly.
 
-## Daily rhythm
-
-- Morning: sponge bath, mouth care, fresh gown. Bee prefers to be sat up slightly for the sponge bath.
-- Midday: quiet time by the window with music. Family often reads to her.
-- Afternoon: brief visit from her granddaughter after school. Bee is most alert at this time.
-- Evening: dim lights by 7pm. Music off by 9pm.
-- Overnight: only mouth care and repositioning. Do not wake her for anything else.
+Dosing and schedule changes are authorized by Dr. Okafor. The nurse may request a change; she does not authorize it herself.
 
 ## Signs to watch for
 
@@ -48,7 +81,10 @@ If you are unsure, call. The on-call nurse would rather hear from you.
 
 ## Contacts
 
-- Primary caregiver (daughter, Anna) - (415) 555-0142
-- Backup family (son, Michael) - (415) 555-0187
-- Hospice on-call nurse (24 hours) - (415) 555-0100
-- Chaplain (visits Wednesdays) - (415) 555-0165
+- Daniel Voss - son, primary caregiver - (555) 011-2233
+- Marisol Voss - daughter-in-law - (555) 011-9988
+- Priya Anand - primary hospice nurse, on-call 24/7 - (555) 044-5566
+- Grace Lin - volunteer coordinator, weekdays 9am-5pm - (555) 033-7788
+- Dr. Sam Okafor - hospice physician, reached via the nurse line - (555) 099-1122
+
+For a medical emergency, call 911 or the on-call nurse line.
