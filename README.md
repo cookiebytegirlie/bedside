@@ -23,3 +23,17 @@ POST /ask-careplan
 
 Both sides code against this shape. Sydney mocks `/summarize` responses in
 `/web` while the real endpoint is being built; nobody blocks anybody.
+
+## Editing agent prompts
+
+`shared/prompts.md` is the human source of truth for all three agent system
+prompts. The Edge Functions import their compiled twin at
+`supabase/functions/_shared/prompts.ts`, which is generated. After editing
+`shared/prompts.md`:
+
+```
+node scripts/sync-prompts.mjs
+```
+
+Commit both files together. Do not hand-edit `_shared/prompts.ts` — the
+regenerator will overwrite you.
