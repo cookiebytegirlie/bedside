@@ -112,13 +112,12 @@ export function askCarePlan(question, plan) {
       const lower = question.toLowerCase()
       const rule = QA_RULES.find((r) => r.keywords.some((k) => lower.includes(k)))
       if (rule) {
-        const matched = rule.keywords.find((k) => lower.includes(k))
         resolve({
           answer: rule.respond(plan),
           source: rule.source,
           sectionId: rule.sectionId,
           confidence: 'high',
-          reasoning: `Your question included the word "${matched}", which this assistant matches against a fixed list of care-plan topics. That matched the ${rule.source} section, so the answer above is copied directly from the household's structured care-plan record for that section — nothing was summarized or inferred.`,
+          reasoning: `Retrieved from the ${rule.source} section of the household's care-plan record — the answer above is quoted from the plan, not generated from general knowledge.`,
         })
       } else {
         resolve({

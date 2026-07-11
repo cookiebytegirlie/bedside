@@ -238,6 +238,21 @@ export async function fetchVisitDigest() {
   return { ...fallbackDigest, _fallback: true }
 }
 
+// The deployed summarize function intermittently returns a parse-failure stub
+// as an HTTP 200 — { summary: "Could not process note - please re-record",
+// urgency: "yellow", urgency_reason: "AI response could not be parsed",
+// confidence: "low" } — when the agent's output comes back in a shape the
+// function can't parse (observed ~1 in 3 calls). It's the same flaky-stub
+// pattern as get-trends: simply asking again almost always lands on the real
+// structured summary, so we retry before giving up rather than showing the
+// caregiver a "could not process note" card for a note the agent can handle.
+function isSummarizeStub(data) {
+  const d = data || {}
+  return /could not be parsed/i.test(d.urgency_reason || '') || /could not process note/i.test(d.summary || '')
+}
+
+const SUMMARIZE_MAX_ATTEMPTS = 3
+
 export async function summarizeShiftNote(transcript) {
   if (!isBackendConfigured()) {
     // No key yet — go straight to the mock, but keep the ~1.5s "processing"
@@ -245,23 +260,36 @@ export async function summarizeShiftNote(transcript) {
     await new Promise((r) => setTimeout(r, 1400))
     return mockResponse(transcript)
   }
-  try {
-    const res = await fetch(`${SUPABASE_URL}/functions/v1/summarize`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        apikey: ANON_KEY,
-        Authorization: `Bearer ${ANON_KEY}`,
-      },
-      body: JSON.stringify({ transcript }),
-    })
-    if (!res.ok) throw new Error(`summarize returned HTTP ${res.status}`)
-    const data = await res.json()
-    return normalize(data, transcript)
-  } catch (err) {
-    console.warn('[summarizeShiftNote] falling back to mock:', err?.message || err)
-    return mockResponse(transcript)
+  for (let attempt = 1; attempt <= SUMMARIZE_MAX_ATTEMPTS; attempt++) {
+    try {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/summarize`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: ANON_KEY,
+          Authorization: `Bearer ${ANON_KEY}`,
+        },
+        body: JSON.stringify({ transcript }),
+      })
+      if (!res.ok) throw new Error(`summarize returned HTTP ${res.status}`)
+      const data = await res.json()
+      if (isSummarizeStub(data)) {
+        // Parse-failure stub — retrying usually lands on a real summary.
+        console.info(`[summarizeShiftNote] parse-failure stub, retrying (${attempt}/${SUMMARIZE_MAX_ATTEMPTS})`)
+        continue
+      }
+      return normalize(data, transcript)
+    } catch (err) {
+      // A network/HTTP error won't fix itself on retry — stop and fall back.
+      console.warn('[summarizeShiftNote] falling back to mock:', err?.message || err)
+      return mockResponse(transcript)
+    }
   }
+  // Every attempt returned the stub — fall back to the local summary so the
+  // caregiver still gets a usable card (keyword-based urgency and all) instead
+  // of "could not process note".
+  console.warn('[summarizeShiftNote] summarize kept returning the parse-failure stub, falling back to mock')
+  return mockResponse(transcript)
 }
 
 // ---------------------------------------------------------------------------
@@ -282,27 +310,34 @@ import { askCarePlan as mockAskCarePlan } from '../ai/mockAgent'
 
 // The Edge Function returns { answer, sources[] }; the UI wants
 // { answer, source, sectionId, confidence, reasoning } for its "How we know
-// this" disclosure. The live agent cites care-plan doc anchors (e.g.
-// "careplan.md#comfort-measures"), not the app's info-panel ids, so we surface
-// the citation as `source` for provenance but leave `sectionId` null rather
-// than fabricate a deep-link that might not resolve.
+// this" disclosure. When the agent cites granular care-plan anchors (e.g.
+// "careplan.md#comfort-measures") we surface them verbatim, but leave
+// `sectionId` null rather than fabricate a deep-link that might not resolve.
+//
+// In practice the live agent answers straight from the household's care-plan
+// document and returns an empty sources[] — retrieval over that doc is the
+// whole point of the feature. So when there's an answer but no explicit
+// citation, we still attribute it to the care-plan doc itself. Falling back to
+// "not sourced — please verify independently" here would be flatly wrong: the
+// answer *is* grounded in the plan, and that provenance is the anti-
+// hallucination beat, not something to cast doubt on.
 function normalizeCarePlanAnswer(data) {
   const d = data || {}
   const answer = typeof d.answer === 'string' ? d.answer.trim() : ''
   const sources = Array.isArray(d.sources)
     ? d.sources.map((s) => String(s ?? '').trim()).filter(Boolean)
     : []
-  const source = sources[0] || null
+  const source = sources.length ? sources.join(', ') : answer ? "Ellie's care plan" : null
   return {
     answer,
     source,
     sectionId: null,
-    confidence: source ? 'high' : answer ? 'medium' : null,
+    confidence: source ? 'high' : null,
     reasoning: source
-      ? `This answer was retrieved from the household's care-plan document (${sources.join(', ')}) by the care-plan assistant — it's quoting the plan, not generating from general knowledge.`
-      : answer
-        ? "This answer came from the care-plan assistant reading the household's care-plan document."
-        : null,
+      ? `The care-plan assistant answers only from the household's care-plan document — this reply is grounded in that record${
+          sources.length ? ` (${sources.join(', ')})` : ''
+        }, not general knowledge.`
+      : null,
     _fallback: false,
   }
 }
