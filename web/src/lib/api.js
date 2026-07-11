@@ -157,15 +157,24 @@ function normalizeDigest(data) {
     .map((w) => {
       const intervention = String(w?.intervention ?? '').trim()
       const outcome = String(w?.outcome ?? '').trim()
-      const count = typeof w?.worked_count === 'number' ? w.worked_count : undefined
-      const label = outcome ? `${intervention} — ${outcome}` : intervention
-      return { status: workingStatus(outcome, count), label }
+      // worked_count is the short tally shown next to the intervention (spec:
+      // "intervention + worked_count"). The deployed agent returns it as a
+      // number ("3") or a phrase ("3 of 4 logged attempts"); accept both. The
+      // full `outcome` paragraph only feeds the yes/no/mixed status, never the
+      // label — otherwise a whole sentence lands in the one-line row.
+      const numericCount = typeof w?.worked_count === 'number' ? w.worked_count : undefined
+      const countText = w?.worked_count != null ? String(w.worked_count).trim() : ''
+      const label = countText ? `${intervention} — ${countText}` : intervention
+      return { status: workingStatus(outcome, numericCount), label }
     })
     .filter((w) => w.label)
 
-  // If the agent returned nothing usable, fall back rather than show blanks.
+  // Nothing usable. The deployed get-trends function intermittently answers
+  // with an empty stub ({ trends: [], patterns: [], flags: [] }) instead of the
+  // real digest, so return null and let fetchVisitDigest retry rather than
+  // committing to the hardcoded fallback on the first empty answer.
   if (!needsList.length && !patternText && !changed.length && !working.length) {
-    return { ...fallbackDigest, _fallback: true }
+    return null
   }
 
   return {
@@ -180,6 +189,16 @@ function normalizeDigest(data) {
   }
 }
 
+// The deployed get-trends function intermittently returns an empty stub
+// ({ trends: [], patterns: [], flags: [] }) instead of the real digest. When it
+// does so *quickly* (~1s) it's the cheap degenerate path, and simply asking
+// again usually lands on the real reasoning — so we retry. But an empty answer
+// that took a long time means the backend did the full agent pass and still
+// produced nothing; retrying that just multiplies the wait (observed: a single
+// empty response taking 60s), so we stop and fall back instead.
+const DIGEST_MAX_ATTEMPTS = 4
+const DIGEST_SLOW_EMPTY_MS = 8000
+
 export async function fetchVisitDigest() {
   if (!isBackendConfigured()) {
     // No key yet — keep a brief "reasoning" beat so the loading state is
@@ -187,22 +206,36 @@ export async function fetchVisitDigest() {
     await new Promise((r) => setTimeout(r, 1400))
     return { ...fallbackDigest, _fallback: true }
   }
-  try {
-    const res = await fetch(`${SUPABASE_URL}/functions/v1/get-trends`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        apikey: ANON_KEY,
-        Authorization: `Bearer ${ANON_KEY}`,
-      },
-      body: JSON.stringify({}),
-    })
-    if (!res.ok) throw new Error(`get-trends returned HTTP ${res.status}`)
-    return normalizeDigest(await res.json())
-  } catch (err) {
-    console.warn('[fetchVisitDigest] falling back to hardcoded digest:', err?.message || err)
-    return { ...fallbackDigest, _fallback: true }
+  for (let attempt = 1; attempt <= DIGEST_MAX_ATTEMPTS; attempt++) {
+    try {
+      const startedAt = Date.now()
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/get-trends`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: ANON_KEY,
+          Authorization: `Bearer ${ANON_KEY}`,
+        },
+        body: JSON.stringify({}),
+      })
+      if (!res.ok) throw new Error(`get-trends returned HTTP ${res.status}`)
+      const digest = normalizeDigest(await res.json())
+      if (digest) return digest
+      // Empty stub. Only worth retrying if it came back fast (the cheap path);
+      // a slow empty means the agent already ran and had nothing, so stop.
+      const elapsed = Date.now() - startedAt
+      if (elapsed > DIGEST_SLOW_EMPTY_MS) {
+        console.warn(`[fetchVisitDigest] slow empty response (${elapsed}ms) — backend produced no digest, falling back`)
+        break
+      }
+      console.info(`[fetchVisitDigest] empty response in ${elapsed}ms, retrying (${attempt}/${DIGEST_MAX_ATTEMPTS})`)
+    } catch (err) {
+      // A network/HTTP error won't fix itself on retry — stop and fall back.
+      console.warn('[fetchVisitDigest] falling back to hardcoded digest:', err?.message || err)
+      break
+    }
   }
+  return { ...fallbackDigest, _fallback: true }
 }
 
 export async function summarizeShiftNote(transcript) {
