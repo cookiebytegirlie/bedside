@@ -168,35 +168,64 @@ Deno.serve(async (req) => {
     .replace(/\/api\/v1(?:\/chat\/completions)?$/, "");
   const url = `${base}/api/v1/chat/completions`;
 
+  // DO trends agent latency in the playground is ~32s; via this API path it
+  // is materially slower (empirically both 45s attempts time out, so real
+  // latency > 45s). 90s per attempt gives the agent enough runway, with one
+  // retry on timeout only (HTTP errors don't fix themselves on retry). Every
+  // attempt logs elapsed ms so we can see the real latency in Function logs.
+  const ATTEMPT_TIMEOUT_MS = 90_000;
+  const MAX_ATTEMPTS = 2;
+
   let content: string | null = null;
-  try {
-    const resp = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        messages: [{ role: "user", content: formatted }],
-      }),
-      // Fail fast: the DO trends agent has been observed hanging until the
-      // full timeout on every call. Waiting a full minute just to serve the
-      // honest fallback is worse UX than serving it in 8 seconds.
-      signal: AbortSignal.timeout(8_000),
-    });
-    if (!resp.ok) {
-      const detail = await resp.text().catch(() => "");
-      console.error(
-        "get-trends: agent HTTP",
-        resp.status,
-        detail.slice(0, 500),
+  let sawTimeout = false;
+
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    const startedAt = Date.now();
+    try {
+      const resp = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          messages: [{ role: "user", content: formatted }],
+        }),
+        signal: AbortSignal.timeout(ATTEMPT_TIMEOUT_MS),
+      });
+      const elapsedMs = Date.now() - startedAt;
+      if (!resp.ok) {
+        const detail = await resp.text().catch(() => "");
+        console.error(
+          `get-trends: attempt ${attempt} HTTP ${resp.status} after ${elapsedMs}ms`,
+          detail.slice(0, 500),
+        );
+        return jsonResponse(envelope({ ...SAFE_FALLBACK }));
+      }
+      const json = await resp.json();
+      content = json?.choices?.[0]?.message?.content ?? null;
+      console.log(
+        `get-trends: attempt ${attempt} succeeded after ${elapsedMs}ms`,
       );
-      return jsonResponse(envelope({ ...SAFE_FALLBACK }));
+      break;
+    } catch (err) {
+      const elapsedMs = Date.now() - startedAt;
+      const isTimeout = err instanceof Error && err.name === "TimeoutError";
+      console.error(
+        `get-trends: attempt ${attempt} ${isTimeout ? "timed out" : "failed"} after ${elapsedMs}ms`,
+        err,
+      );
+      if (!isTimeout || attempt >= MAX_ATTEMPTS) {
+        return jsonResponse(envelope({ ...SAFE_FALLBACK }));
+      }
+      sawTimeout = true;
     }
-    const json = await resp.json();
-    content = json?.choices?.[0]?.message?.content ?? null;
-  } catch (err) {
-    console.error("get-trends: agent call failed", err);
+  }
+
+  if (sawTimeout && content === null) {
+    // Belt-and-braces: if the loop exits with no content and we saw only
+    // timeouts, we already fell back inside the catch above. This is here
+    // to satisfy the type checker for the fall-through path.
     return jsonResponse(envelope({ ...SAFE_FALLBACK }));
   }
 

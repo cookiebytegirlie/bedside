@@ -198,12 +198,12 @@ function normalizeDigest(data) {
 // empty response taking 60s), so we stop and fall back instead.
 const DIGEST_MAX_ATTEMPTS = 4
 const DIGEST_SLOW_EMPTY_MS = 8000
-// Per-fetch fail-fast cap that mirrors the server's 8s AbortSignal in
-// get-trends/index.ts. If the DO trends agent is hanging outright (observed:
-// exactly 60s TimeoutError on every call), the first fetch aborts here at 8s
-// and the catch below breaks the retry loop — UI reaches the honest fallback
-// in ~8s instead of spinning for a minute.
-const DIGEST_TIMEOUT_MS = 8_000
+// Per-fetch cap that covers the server's full retry budget in get-trends
+// (two 90s attempts) plus a small margin, so the client waits for the server
+// to serve either the real digest or its own SAFE_FALLBACK rather than
+// aborting first. The DO trends agent takes ~32s in the playground but is
+// materially slower via the API path, hence the wide cap.
+const DIGEST_TIMEOUT_MS = 200_000
 
 export async function fetchVisitDigest() {
   if (!isBackendConfigured()) {
