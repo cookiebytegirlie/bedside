@@ -263,3 +263,71 @@ export async function summarizeShiftNote(transcript) {
     return mockResponse(transcript)
   }
 }
+
+// ---------------------------------------------------------------------------
+// Care-Plan Q&A — "Ask about the care plan" (spec A2)
+//
+// askCarePlan(question, plan) -> Promise<CarePlanAnswer>
+//
+// Calls the ask-careplan Edge Function, which forwards the question to the DO
+// Agent Platform care-plan agent (retrieval over the household's care-plan
+// doc). The agent's own system prompt handles graceful refusals for
+// out-of-scope or clinical questions, so those come back as an ordinary
+// `answer` string — we just render it. On an unconfigured backend, any
+// non-2xx, a network failure, or an empty answer, we fall back to the local
+// mock so the demo never breaks and the same refusal behavior still shows
+// (spec requirement 7). Red-flag escalation is handled by the caller before
+// this is ever reached, so nothing here touches that flow.
+import { askCarePlan as mockAskCarePlan } from '../ai/mockAgent'
+
+// The Edge Function returns { answer, sources[] }; the UI wants
+// { answer, source, sectionId, confidence, reasoning } for its "How we know
+// this" disclosure. The live agent cites care-plan doc anchors (e.g.
+// "careplan.md#comfort-measures"), not the app's info-panel ids, so we surface
+// the citation as `source` for provenance but leave `sectionId` null rather
+// than fabricate a deep-link that might not resolve.
+function normalizeCarePlanAnswer(data) {
+  const d = data || {}
+  const answer = typeof d.answer === 'string' ? d.answer.trim() : ''
+  const sources = Array.isArray(d.sources)
+    ? d.sources.map((s) => String(s ?? '').trim()).filter(Boolean)
+    : []
+  const source = sources[0] || null
+  return {
+    answer,
+    source,
+    sectionId: null,
+    confidence: source ? 'high' : answer ? 'medium' : null,
+    reasoning: source
+      ? `This answer was retrieved from the household's care-plan document (${sources.join(', ')}) by the care-plan assistant — it's quoting the plan, not generating from general knowledge.`
+      : answer
+        ? "This answer came from the care-plan assistant reading the household's care-plan document."
+        : null,
+    _fallback: false,
+  }
+}
+
+export async function askCarePlan(question, plan) {
+  if (!isBackendConfigured()) {
+    // No key yet — defer to the local mock (keeps its own ~0.9s beat).
+    return mockAskCarePlan(question, plan)
+  }
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/ask-careplan`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: ANON_KEY,
+        Authorization: `Bearer ${ANON_KEY}`,
+      },
+      body: JSON.stringify({ question }),
+    })
+    if (!res.ok) throw new Error(`ask-careplan returned HTTP ${res.status}`)
+    const normalized = normalizeCarePlanAnswer(await res.json())
+    if (!normalized.answer) throw new Error('ask-careplan returned an empty answer')
+    return normalized
+  } catch (err) {
+    console.warn('[askCarePlan] falling back to mock:', err?.message || err)
+    return mockAskCarePlan(question, plan)
+  }
+}

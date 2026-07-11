@@ -25,14 +25,16 @@ function restHeaders(extra = {}) {
   }
 }
 
-// Persists one entry. `response` is the full AI response object.
-export async function saveLogEntry({ transcript, response, author }) {
+// Persists one entry. `response` is the full AI response object. `urgency` is
+// the caregiver's own flag, which is authoritative — the AI's read inside
+// `response` is only a suggestion — so it drives `urgency_tag` when provided.
+export async function saveLogEntry({ transcript, response, author, urgency }) {
   if (!isBackendConfigured()) return { ok: false, reason: 'not-configured' }
   const row = {
     type: 'note',
     raw_text: transcript,
     ai_response: response,
-    urgency_tag: response?.urgency ?? 'green',
+    urgency_tag: urgency ?? response?.urgency ?? 'green',
     timestamp: new Date().toISOString(),
     logged_by: author ?? null,
   }

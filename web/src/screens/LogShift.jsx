@@ -7,10 +7,13 @@ import OnDutyHeader from '../components/OnDutyHeader'
 import UrgencyPicker from '../components/UrgencyPicker'
 import AiResultCard from '../components/AiResultCard'
 import EscalationFlow from '../components/EscalationFlow'
-import { MicIcon, PillIcon, RefreshIcon, CheckIcon } from '../components/icons'
+import { MicIcon, PillIcon, RefreshIcon, CheckIcon, SparklesIcon } from '../components/icons'
 
 const ACTIVITY_OPTIONS = ['Sleeping', 'Relaxing', 'Eating', 'Activity']
 const LOCATION_OPTIONS = ['Living Room', 'Bedroom', 'Garden', 'Kitchen']
+
+// Plain-language name for each urgency flag, matching UrgencyPicker's labels.
+const URGENCY_LABEL = { green: 'Routine', yellow: 'Keep an eye on', red: 'Needs attention' }
 
 function useSpeechRecognition(onResult) {
   const recognitionRef = useRef(null)
@@ -169,14 +172,14 @@ function MedsSection({ sessionId, urgency }) {
   )
 }
 
-function NotesSection({ sessionId }) {
+function NotesSection({ sessionId, flag, setFlag, escalated }) {
   const { addLog, activeProfile, contacts } = useHousehold()
   const seeMeds = canSeeMeds(activeProfile?.role)
   const isVolunteerAide = /volunteer|aide/i.test(activeProfile?.role || '')
   const [transcript, setTranscript] = useState('')
   const [stage, setStage] = useState('idle') // idle | processing | result | saved
   const [result, setResult] = useState(null)
-  const [escalated, setEscalated] = useState(false) // set once the nurse has been notified
+  const [recDismissed, setRecDismissed] = useState(false) // AI recommendation declined/handled
   const { listening, supported, toggle } = useSpeechRecognition(setTranscript)
 
   const process = async () => {
@@ -184,25 +187,27 @@ function NotesSection({ sessionId }) {
     setStage('processing')
     const res = await summarizeShiftNote(transcript)
     setResult(res)
-    setEscalated(false)
+    setRecDismissed(false)
     setStage('result')
   }
 
   const reset = () => {
     setTranscript('')
     setResult(null)
-    setEscalated(false)
+    setRecDismissed(false)
     setStage('idle')
   }
 
   const save = async () => {
     // Persist to Supabase (best-effort) and reflect on the in-memory timeline.
-    await saveLogEntry({ transcript, response: result, author: activeProfile?.name })
+    // The urgency saved is the caregiver's own flag — the AI's read is only a
+    // suggestion they can accept (which updates the flag) or ignore.
+    await saveLogEntry({ transcript, response: result, author: activeProfile?.name, urgency: flag })
     addLog({
       author: activeProfile?.name ?? 'You',
       type: isVolunteerAide ? 'skin-integrity' : 'shift-note',
       summary: result.summary,
-      urgency: result.urgency,
+      urgency: flag,
       rawTranscript: transcript,
       aiResponse: result,
       sessionId,
@@ -278,14 +283,46 @@ function NotesSection({ sessionId }) {
         <div className="mt-3 space-y-3">
           <AiResultCard transcript={transcript} result={result} seeMeds={seeMeds} />
 
-          {result.urgency === 'red' && (
-            <EscalationFlow
-              trigger={{
-                quote: transcript,
-                reasonLine: result.urgency_reason || 'This looks urgent — surfaced for immediate review.',
-              }}
-              onNotified={() => setEscalated(true)}
-            />
+          {/* The caregiver's flag is authoritative. When the AI reads the note
+              differently, offer its call as a recommendation with reasoning —
+              they decide whether to adopt it or keep their own flag. */}
+          {result.urgency !== flag && !recDismissed && (
+            <div className="rounded-[8px] bg-white p-4 shadow-card ring-2 ring-mist/40">
+              <div className="flex items-start gap-2">
+                <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-sage-100 text-mist">
+                  <SparklesIcon width={15} height={15} strokeWidth={2} />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-sm font-bold text-ink">
+                    Bedside AI suggests “{URGENCY_LABEL[result.urgency]}”
+                  </p>
+                  {(result.urgency_reason || result.reasoning) && (
+                    <p className="mt-1 text-[13px] font-medium leading-snug text-ink/70">
+                      {result.urgency_reason || result.reasoning}
+                    </p>
+                  )}
+                  <p className="mt-1.5 text-[12px] font-medium leading-snug text-muted">
+                    You flagged this “{URGENCY_LABEL[flag]},” and that’s what gets saved. Accept only if you agree.
+                  </p>
+                </div>
+              </div>
+              <div className="mt-3 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setFlag(result.urgency)}
+                  className="flex-1 rounded-full bg-mist py-2.5 text-sm font-bold text-white active:scale-[0.98]"
+                >
+                  Use “{URGENCY_LABEL[result.urgency]}”
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRecDismissed(true)}
+                  className="flex-1 rounded-full border border-sage-200 py-2.5 text-sm font-bold text-muted active:scale-[0.98]"
+                >
+                  Keep “{URGENCY_LABEL[flag]}”
+                </button>
+              </div>
+            </div>
           )}
 
           <div className="flex gap-2">
@@ -322,7 +359,16 @@ export default function LogShift() {
   // so the Timeline can group it into a single card instead of one per tap.
   const sessionIdRef = useRef(`session-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
   const [flag, setFlag] = useState('green')
+  // Set once the on-call nurse has been notified for this entry (only while the
+  // flag is "Needs attention"); stamped onto the saved note so the Timeline can
+  // show the "nurse notified automatically" line.
+  const [escalated, setEscalated] = useState(false)
   const { activeProfile } = useHousehold()
+
+  // Dropping the flag below "Needs attention" clears any prior escalation state.
+  useEffect(() => {
+    if (flag !== 'red') setEscalated(false)
+  }, [flag])
   // Volunteers/aides are a merged, non-medical role tier — administering or
   // even checking off medication is out of scope for them, same as it would
   // be for a home health aide in a real hospice household.
@@ -339,10 +385,12 @@ export default function LogShift() {
           <UrgencyPicker value={flag} onChange={setFlag} />
         </div>
 
-        {/* Manually flagging the whole entry "Needs attention" escalates the
-            same way a red-flagged note does — even for a status/meds-only entry
-            with no dictated note. The status/meds taps below already carry the
-            red urgency onto their Timeline entries. */}
+        {/* The flag is the single source of urgency for the whole entry, so a
+            "Needs attention" flag escalates once here — whether it's a
+            status/meds-only entry or one with a dictated note (the note's AI
+            read only *suggests* a flag change; escalation follows the flag the
+            caregiver actually keeps). The status/meds taps below carry the same
+            flag onto their Timeline entries. */}
         {flag === 'red' && (
           <div className="mb-6">
             <EscalationFlow
@@ -351,13 +399,14 @@ export default function LogShift() {
                 reasonLine:
                   'You marked this entry “Needs attention,” so the on-call nurse is being looped in automatically.',
               }}
+              onNotified={() => setEscalated(true)}
             />
           </div>
         )}
 
         <StatusSection sessionId={sessionIdRef.current} urgency={flag} />
         {canGiveMeds && <MedsSection sessionId={sessionIdRef.current} urgency={flag} />}
-        <NotesSection sessionId={sessionIdRef.current} />
+        <NotesSection sessionId={sessionIdRef.current} flag={flag} setFlag={setFlag} escalated={escalated} />
       </main>
     </>
   )
