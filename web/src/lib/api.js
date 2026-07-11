@@ -254,24 +254,32 @@ async function fetchVisitDigestFresh() {
   return { ...fallbackDigest, _fallback: true }
 }
 
+// Wraps fetchVisitDigestFresh so a fallback result doesn't get cached — if
+// the prefetch times out and resolves to the sample fallback, the next call
+// (refresh button, next prefetch, whatever) actually retries the agent
+// instead of silently returning the same fallback forever.
+function fetchAndCache() {
+  const promise = fetchVisitDigestFresh().then((result) => {
+    if (result?._fallback) _digestPromise = null
+    return result
+  })
+  _digestPromise = promise
+  promise.catch(() => { _digestPromise = null })
+  return promise
+}
+
 // Kick off the digest fetch once, at app load. If called again before it
 // resolves, returns the same in-flight promise so consumers share the wait
 // instead of duplicating the ~58s request.
 export function startVisitDigestPrefetch() {
-  if (!_digestPromise) {
-    _digestPromise = fetchVisitDigestFresh()
-    // Swallow unhandled rejection warnings if the initial caller never awaits.
-    _digestPromise.catch(() => {})
-  }
+  if (!_digestPromise) fetchAndCache()
   return _digestPromise
 }
 
 // Invalidate the cache and start a fresh fetch — used by the modal's refresh
 // button so tapping it always re-hits the agent.
 export function refreshVisitDigest() {
-  _digestPromise = fetchVisitDigestFresh()
-  _digestPromise.catch(() => {})
-  return _digestPromise
+  return fetchAndCache()
 }
 
 // Public API preserved: returns the cached (possibly in-flight) promise, or

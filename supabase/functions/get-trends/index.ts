@@ -168,12 +168,12 @@ Deno.serve(async (req) => {
     .replace(/\/api\/v1(?:\/chat\/completions)?$/, "");
   const url = `${base}/api/v1/chat/completions`;
 
-  // DO trends agent latency in the playground is ~32s; via this API path it
-  // typically completes in ~58s. Single attempt with a 90s cap - a 180s
-  // worst case (two attempts) is a three-minute silent hang in a live demo,
-  // which is worse UX than failing fast to the honest SAFE_FALLBACK. Elapsed
-  // ms is logged either way so the real latency stays visible.
-  const ATTEMPT_TIMEOUT_MS = 90_000;
+  // DO trends agent latency has been observed drifting upward: 32s in the
+  // playground, 58s in a good API run, 90s+ in a slow one, 120s in a very
+  // slow one. 180s single attempt catches even the slow runs; the client
+  // prefetches on app load, so most of this wait happens in the background
+  // before the user ever opens the digest modal.
+  const ATTEMPT_TIMEOUT_MS = 180_000;
   const MAX_ATTEMPTS = 1;
 
   let content: string | null = null;
