@@ -39,7 +39,11 @@ function useSpeechRecognition(onResult) {
     }
     recognition.onend = () => setListening(false)
     recognitionRef.current = recognition
-    return () => recognition.stop()
+    // abort() discards buffered audio without firing a final onresult; stop()
+    // would emit stray speech into the transcript as the component tears down.
+    return () => {
+      try { recognition.abort() } catch { /* not started */ }
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -54,7 +58,16 @@ function useSpeechRecognition(onResult) {
     }
   }
 
-  return { listening, supported, toggle }
+  // Force-stop for submit/tear-down paths. abort() (not stop()) discards any
+  // buffered speech so the transcript can't grow after this returns; stop()
+  // would fire one last onresult and append stray words.
+  const stop = () => {
+    if (!recognitionRef.current) return
+    try { recognitionRef.current.abort() } catch { /* not started */ }
+    setListening(false)
+  }
+
+  return { listening, supported, toggle, stop }
 }
 
 function OptionGrid({ label, options, value, onPick }) {
@@ -180,10 +193,13 @@ function NotesSection({ sessionId, flag, setFlag, escalated }) {
   const [stage, setStage] = useState('idle') // idle | processing | result | saved
   const [result, setResult] = useState(null)
   const [recDismissed, setRecDismissed] = useState(false) // AI recommendation declined/handled
-  const { listening, supported, toggle } = useSpeechRecognition(setTranscript)
+  const { listening, supported, toggle, stop } = useSpeechRecognition(setTranscript)
 
   const process = async () => {
     if (!transcript.trim()) return
+    // Kill capture BEFORE firing summarize so late-arriving speech can't
+    // append to the transcript while the request is in flight.
+    stop()
     setStage('processing')
     const res = await summarizeShiftNote(transcript)
     setResult(res)
@@ -235,7 +251,7 @@ function NotesSection({ sessionId, flag, setFlag, escalated }) {
             <button
               type="button"
               onClick={toggle}
-              disabled={!supported}
+              disabled={!supported || stage === 'processing'}
               className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-colors disabled:opacity-40 ${
                 listening ? 'animate-pulse bg-clay-500 text-white' : 'bg-mist text-white'
               }`}
