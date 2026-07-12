@@ -40,17 +40,33 @@ function SkeletonBlock({ lines = 2 }) {
 // The content is generated live: on open (and on every refresh tap) we call
 // the get-trends agent, which reads the actual log table. `visitDigest` from
 // mockData is only a fallback if that call fails.
+// Hard UI cap: never let the modal spin longer than this before showing
+// something. If the real digest hasn't arrived by then we render the sample
+// with a "still loading" attribution, and swap in the real result if/when
+// it lands. DO's trends agent takes 30-120s, so a strict spinner would
+// leave the user staring at nothing for a full minute of demo time.
+const UI_CAP_MS = 5000
+
 export default function VisitDigestModal({ open, onClose, role, onReview }) {
   const [digest, setDigest] = useState(visitDigest)
   const [loading, setLoading] = useState(false)
 
   async function loadDigest({ force = false } = {}) {
     setLoading(true)
-    try {
-      setDigest(await (force ? refreshVisitDigest() : fetchVisitDigest()))
-    } finally {
+    const promise = force ? refreshVisitDigest() : fetchVisitDigest()
+
+    // At UI_CAP_MS, if we haven't heard back yet, show the sample and mark
+    // it _pending so the header reads "loading in background" rather than
+    // "unavailable". Timer is cleared if the real promise resolves first.
+    const timerId = setTimeout(() => {
+      setDigest({ ...visitDigest, _fallback: true, _pending: true })
       setLoading(false)
-    }
+    }, UI_CAP_MS)
+
+    const real = await promise
+    clearTimeout(timerId)
+    setDigest(real)
+    setLoading(false)
   }
 
   // On open, await whatever the app-load prefetch already kicked off (usually
@@ -63,13 +79,16 @@ export default function VisitDigestModal({ open, onClose, role, onReview }) {
   if (!open) return null
   const seeMeds = canSeeMeds(role)
   const working = digest.working.filter((w) => seeMeds || !w.sensitive)
+  const stillFetching = loading || digest._pending
   // Header must reflect the real state — a demo saying "Analyzed 15 shift logs
   // from 5 people" while rendering the hardcoded fallback is a false claim.
   const attribution = loading
     ? 'Reading the shift logs…'
-    : digest._fallback
-      ? 'Live analysis unavailable — showing a sample digest'
-      : 'Analyzed your recent shift logs · just now'
+    : digest._pending
+      ? 'Sample shown — live analysis loading in background…'
+      : digest._fallback
+        ? 'Live analysis unavailable — showing a sample digest'
+        : 'Analyzed your recent shift logs · just now'
 
   return (
     <div
@@ -85,7 +104,7 @@ export default function VisitDigestModal({ open, onClose, role, onReview }) {
             <h2 className="text-xl font-bold text-ink">Since your last visit</h2>
             <p className="text-[12px] font-semibold text-muted">{digest.lastVisit}</p>
             <p className="mt-0.5 flex items-center gap-1.5 text-[11px] font-medium text-mist">
-              {loading && (
+              {stillFetching && (
                 <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-watch-fg" aria-hidden />
               )}
               {attribution}
@@ -95,11 +114,11 @@ export default function VisitDigestModal({ open, onClose, role, onReview }) {
             <button
               type="button"
               onClick={() => loadDigest({ force: true })}
-              disabled={loading}
+              disabled={stillFetching}
               aria-label="Refresh digest"
               className="rounded-full p-1 text-muted active:scale-90 disabled:opacity-60"
             >
-              <RefreshIcon width={20} height={20} strokeWidth={2} className={loading ? 'animate-spin' : undefined} />
+              <RefreshIcon width={20} height={20} strokeWidth={2} className={stillFetching ? 'animate-spin' : undefined} />
             </button>
             <button type="button" onClick={onClose} aria-label="Close" className="text-muted">
               <XIcon width={22} height={22} strokeWidth={2} />
