@@ -176,6 +176,10 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify({
         messages: [{ role: "user", content: transcript }],
+        // Cap output length. The spec-§10 JSON that this agent returns
+        // typically lands around 250-350 tokens; 400 leaves headroom without
+        // giving the model room to ramble and stretch latency.
+        max_completion_tokens: 400,
       }),
       signal: AbortSignal.timeout(60_000),
     });
