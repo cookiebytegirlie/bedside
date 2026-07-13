@@ -57,8 +57,8 @@ function lastGivenFor(medName, logs) {
 // anchor scrolling from "How we know this" links elsewhere in the app.
 function Section({ id, title, children }) {
   return (
-    <section id={id} className="mt-4 rounded-[8px] bg-white p-4 shadow-card">
-      <h2 className="text-lg font-bold text-ink">{title}</h2>
+    <section id={id} className="mt-4 rounded-card border border-line bg-white p-4">
+      <h2 className="text-[17px] font-semibold tracking-tight text-ink">{title}</h2>
       <div className="mt-3 space-y-3">{children}</div>
     </section>
   )
@@ -74,7 +74,7 @@ function ExpandToggle({ open, onToggle, label }) {
       onClick={onToggle}
       aria-expanded={open}
       aria-label={label}
-      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-mist active:scale-90"
+      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-ink active:scale-90"
     >
       <ChevronRightIcon width={15} height={15} strokeWidth={2.5} className={`transition-transform ${open ? 'rotate-90' : ''}`} />
     </button>
@@ -97,7 +97,7 @@ function DetailItem({ summary, detail }) {
       </div>
       {expanded && (
         <div className="mt-1.5 space-y-1.5">
-          <ul className="space-y-1 rounded-none border-l-2 border-sage-300 pl-5 text-[13px] leading-snug text-ink">
+          <ul className="space-y-1 rounded-none border-l-2 border-line pl-5 text-[13px] leading-snug text-ink">
             {detail.steps.map((step, i) => (
               <li key={i} className="[text-wrap:pretty]">
                 {noWidow(step)}
@@ -105,7 +105,7 @@ function DetailItem({ summary, detail }) {
             ))}
           </ul>
           {detail.watchFor && (
-            <p className="rounded-[8px] border border-watch-fg/50 px-2.5 py-2 text-[13px] leading-snug text-ink/80 [text-wrap:pretty]">
+            <p className="rounded-card border border-watch-solid/50 px-2.5 py-2 text-[13px] leading-snug text-ink/80 [text-wrap:pretty]">
               <span className="font-bold text-ink">Watch for:</span> {noWidow(detail.watchFor)}
             </p>
           )}
@@ -123,16 +123,16 @@ function MedicationItem({ med, lastGiven }) {
   return (
     <div className="py-3 first:pt-0">
       <div className="flex items-start gap-3">
-        <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-clay-50 text-clay-500">
+        <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-track text-icon">
           <PillIcon width={17} height={17} strokeWidth={2} />
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block text-base font-bold text-ink">{med.name}</span>
-          <span className="block text-sm font-semibold text-muted">
+          <span className="block text-[15px] font-semibold tracking-tight text-ink">{med.name}</span>
+          <span className="block text-[13px] font-medium text-muted">
             {med.dose} · {med.schedule}
           </span>
           {lastGiven && (
-            <span className="block text-xs font-semibold text-ink/50">Last given {formatLastGiven(lastGiven)}</span>
+            <span className="block text-xs font-medium text-faint">Last given {formatLastGiven(lastGiven)}</span>
           )}
         </span>
         <ExpandToggle open={open} onToggle={() => setOpen((o) => !o)} label={open ? 'Hide details' : 'Show details'} />
@@ -140,8 +140,8 @@ function MedicationItem({ med, lastGiven }) {
       {open && (
         <InfoPanel nested className="space-y-2 p-3">
           <span
-            className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
-              med.type === 'prn' ? 'bg-clay-50 text-clay-600' : 'bg-white text-mist'
+            className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+              med.type === 'prn' ? 'bg-track text-ink' : 'bg-track text-muted'
             }`}
           >
             {med.type === 'prn' ? 'PRN' : 'Scheduled'}
@@ -157,17 +157,17 @@ function MedicationItem({ med, lastGiven }) {
 function ContactRow({ name, role, phone, availability }) {
   return (
     <a href={telHref(phone)} className="flex items-center gap-3 px-4 py-3.5 active:scale-[0.98]">
-      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-mist">
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-ink">
         <PhoneIcon width={17} height={17} strokeWidth={2} />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block text-base font-bold text-ink">{name}</span>
-        <span className="block text-sm font-semibold text-muted">
+        <span className="block text-[15px] font-semibold tracking-tight text-ink">{name}</span>
+        <span className="block text-[13px] font-medium text-muted">
           {role}
           {availability ? ` · ${availability}` : ''}
         </span>
       </span>
-      <span className="shrink-0 text-sm font-bold text-mist">{phone}</span>
+      <span className="shrink-0 text-[13px] font-semibold text-ink">{phone}</span>
     </a>
   )
 }
@@ -187,12 +187,12 @@ function ContactCard({ contact }) {
             aria-expanded={open}
             className="flex w-full items-center gap-2 px-4 py-2 text-left"
           >
-            <span className="text-[12px] font-bold text-mist">{open ? 'Hide bio' : `About ${firstName(contact.name)}`}</span>
+            <span className="text-[12px] font-bold text-ink">{open ? 'Hide bio' : `About ${firstName(contact.name)}`}</span>
             <ChevronRightIcon
               width={13}
               height={13}
               strokeWidth={2.5}
-              className={`ml-auto shrink-0 text-mist transition-transform ${open ? 'rotate-90' : ''}`}
+              className={`ml-auto shrink-0 text-ink transition-transform ${open ? 'rotate-90' : ''}`}
             />
           </button>
           {open && <p className="px-4 pb-3 text-[13px] font-medium leading-snug [text-wrap:pretty]">{contact.bio}</p>}
@@ -221,10 +221,10 @@ export default function EssentialInfo() {
   return (
     <>
       <OnDutyHeader />
-      <main className="flex-1 px-5 py-5">
-        <div className="mb-5 text-center">
-          <h1 className="text-2xl font-bold text-ink">Essential information</h1>
-          <p className="mt-1 text-sm font-semibold text-muted">Everything at a glance — updated regularly</p>
+      <main className="flex-1 bg-white px-4 py-6">
+        <div className="mb-5">
+          <h1 className="text-[30px] font-bold leading-tight tracking-tighter text-ink">Essential info</h1>
+          <p className="mt-1 text-[14px] font-medium text-muted">Everything at a glance — updated regularly.</p>
         </div>
 
         <div className="mb-4">
@@ -235,10 +235,10 @@ export default function EssentialInfo() {
           />
         </div>
 
-        <InfoPanel className="flex items-start gap-2.5 p-4 shadow-card">
-          <ShieldIcon width={16} height={16} strokeWidth={2} className="mt-0.5 shrink-0 text-mist" />
-          <p className="text-sm font-medium leading-snug">
-            Viewing as <strong className="font-bold">{activeProfile?.role}</strong> —{' '}
+        <InfoPanel className="flex items-start gap-2.5 p-4">
+          <ShieldIcon width={16} height={16} strokeWidth={2} className="mt-0.5 shrink-0 text-ink" />
+          <p className="text-[13px] font-medium leading-snug">
+            Viewing as <strong className="font-semibold">{activeProfile?.role}</strong> —{' '}
             {isClinicalRole
               ? 'full clinical detail is shown.'
               : "showing task-level info only. Dosing detail, preferences, and code status are limited to nurses and family, per HIPAA's minimum-necessary standard."}
@@ -246,10 +246,10 @@ export default function EssentialInfo() {
         </InfoPanel>
 
         {isClinicalRole && (
-          <div id="code-status" className="mt-4 rounded-4xl bg-clay-50 p-5 shadow-card">
-            <p className="text-xs font-bold uppercase tracking-wide text-clay-600">Code status</p>
-            <p className="mt-1 text-base font-medium text-ink">{carePlan.codeStatus}</p>
-            <p className="mt-2 text-sm font-semibold text-clay-600">
+          <div id="code-status" className="mt-4 rounded-card border border-line bg-white p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">Code status</p>
+            <p className="mt-1 text-[15px] font-medium text-ink">{carePlan.codeStatus}</p>
+            <p className="mt-2 text-[13px] font-medium text-muted">
               Signed {formatSignedDate(carePlan.codeStatusSignedAt)} · Authorized by {authorizingPhysician}
             </p>
           </div>
@@ -258,7 +258,11 @@ export default function EssentialInfo() {
         <Section id="allergies" title="Allergies">
           <div className="flex flex-wrap gap-2">
             {carePlan.allergies.map((a) => (
-              <span key={a} className="rounded-full bg-attention-bg px-4 py-1.5 text-sm font-bold text-attention-fg">
+              <span
+                key={a}
+                className="inline-flex items-center gap-1.5 rounded-full bg-attention-tint px-3.5 py-1.5 text-[14px] font-semibold text-attention-fg"
+              >
+                <span className="h-1.5 w-1.5 rounded-full bg-attention-dot" />
                 {a}
               </span>
             ))}
@@ -269,7 +273,7 @@ export default function EssentialInfo() {
             (and other non-clinical roles) don't see this section at all. */}
         {isClinicalRole && (
           <Section id="medications" title="Medications">
-            <div className="divide-y divide-sage-100">
+            <div className="divide-y divide-line">
               {carePlan.medications.map((med) => (
                 <MedicationItem key={med.name} med={med} lastGiven={lastGivenFor(med.name, logs)} />
               ))}
@@ -278,7 +282,7 @@ export default function EssentialInfo() {
             <InfoPanel as="p" className="p-3 text-[13px] font-medium leading-snug">
               Dosing changes are authorized by {authorizingPhysician}.{' '}
               {isNurse(activeProfile?.role) ? (
-                <Link to={`/household/${householdId}/settings/request-med`} className="font-bold text-mist">
+                <Link to={`/household/${householdId}/settings/request-med`} className="font-bold text-ink">
                   Request a change
                 </Link>
               ) : (
@@ -305,14 +309,14 @@ export default function EssentialInfo() {
               <ul className="space-y-2">
                 {carePlan.comfortMeasures.map((m) => (
                   <li key={m} className="flex gap-2 text-base font-medium text-ink/80">
-                    <span className="text-mist">•</span>
+                    <span className="text-ink">•</span>
                     {m}
                   </li>
                 ))}
               </ul>
             </div>
 
-            <div className="border-t border-sage-100 pt-3">
+            <div className="border-t border-line pt-3">
               <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-muted">What's working</p>
               <div className="space-y-2">
                 {visitDigest.working.map((w) => (
@@ -364,7 +368,7 @@ export default function EssentialInfo() {
         {activeProfile?.role === 'Family' && (
           <Link
             to={`/household/${householdId}/access`}
-            className="mt-2 flex items-center justify-center gap-1.5 text-sm font-semibold text-muted hover:text-mist"
+            className="mt-2 flex items-center justify-center gap-1.5 text-sm font-semibold text-muted hover:text-ink"
           >
             <CalendarIcon width={13} height={13} strokeWidth={2} />
             Manage volunteer access
@@ -372,7 +376,7 @@ export default function EssentialInfo() {
         )}
         <Link
           to={`/household/${householdId}/privacy`}
-          className="mt-2 flex items-center justify-center gap-1.5 text-sm font-semibold text-muted hover:text-mist"
+          className="mt-2 flex items-center justify-center gap-1.5 text-sm font-semibold text-muted hover:text-ink"
         >
           <ShieldIcon width={13} height={13} strokeWidth={2} />
           Privacy &amp; security practices
