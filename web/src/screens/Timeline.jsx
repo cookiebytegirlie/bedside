@@ -86,7 +86,7 @@ function OwnWordsToggle({ authorFirst, text }) {
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
-        className="flex items-center gap-1 text-[12px] font-semibold text-mist active:scale-[0.98]"
+        className="flex items-center gap-1 text-[12px] font-semibold text-ink active:scale-[0.98]"
       >
         <ChevronRightIcon
           width={13}
@@ -97,7 +97,7 @@ function OwnWordsToggle({ authorFirst, text }) {
         {open ? 'Hide' : `See ${authorFirst}'s own words`}
       </button>
       {open && (
-        <p className="mt-1.5 border-l-2 border-sage-300 pl-3 text-[13px] font-medium italic leading-snug text-ink/80">
+        <p className="mt-1.5 border-l-2 border-line pl-3 text-[13px] font-medium italic leading-snug text-ink/80">
           “{text}”
         </p>
       )}
@@ -189,26 +189,26 @@ export default function Timeline() {
     <>
       <OnDutyHeader />
 
-      <main className="bg-household flex-1 px-5 pb-5 pt-6">
+      <main className="flex-1 bg-white px-4 pb-5 pt-6">
         <button
           type="button"
           onClick={() => setDigestOpen(true)}
-          className="mx-auto flex w-full max-w-md items-center gap-2.5 rounded-[8px] bg-white p-3 shadow-card transition-transform active:scale-[0.99] lg:max-w-2xl"
+          className="mx-auto flex w-full max-w-md items-center gap-2.5 rounded-card border border-line bg-white p-3 transition-transform active:scale-[0.99] lg:max-w-2xl"
         >
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-sage-100 text-mist">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-track text-ink">
             <SparklesIcon width={17} height={17} strokeWidth={2} />
           </span>
           <span className="min-w-0 flex-1 text-left">
-            <span className="block text-sm font-bold text-ink">Since your last visit</span>
-            <span className="block text-xs font-semibold text-muted">{visitDigest.lastVisit} · tap to review</span>
+            <span className="block text-[14px] font-semibold tracking-tight text-ink">Since your last visit</span>
+            <span className="block text-[12px] font-medium text-muted">{visitDigest.lastVisit} · tap to review</span>
           </span>
-          <ChevronRightIcon width={16} height={16} strokeWidth={2.5} className="shrink-0 text-mist" />
+          <ChevronRightIcon width={16} height={16} strokeWidth={2.5} className="shrink-0 text-faint" />
         </button>
 
         <div className="relative mx-auto mt-16 max-w-md lg:max-w-2xl">
-          <div className="rounded-[8px] bg-white p-4 pb-4 pt-8 shadow-card">
+          <div className="rounded-card border border-line bg-white p-4 pb-4 pt-8">
             <div className="pl-28">
-              <p className="text-[19px] font-bold leading-tight text-ink">{household.preferredName}'s current status</p>
+              <p className="text-[19px] font-semibold tracking-tight leading-tight text-ink">{household.preferredName}'s current status</p>
               <p className="mt-1.5 text-[13px] font-medium leading-tight text-ink">
                 <span className="font-bold">Currently:</span> {status} in <span className="font-bold">{location}</span>
                 <br />
@@ -226,28 +226,28 @@ export default function Timeline() {
               to={`/household/${householdId}/about`}
               className="mt-3 flex items-center gap-2.5 px-3 py-2.5 transition-transform active:scale-[0.99]"
             >
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white text-mist shadow-card">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white text-ink shadow-soft">
                 <BookIcon width={15} height={15} strokeWidth={2} />
               </span>
-              <span className="min-w-0 flex-1 text-[12px] font-medium leading-snug">
+              <span className="min-w-0 flex-1 text-[12px] font-medium leading-snug text-ink">
                 Get to know {household.preferredName} — her habits, routines, and personal story.{' '}
-                <span className="font-bold text-mist">Learn more</span>
+                <span className="font-semibold text-ink underline underline-offset-2">Learn more</span>
               </span>
-              <ChevronRightIcon width={15} height={15} strokeWidth={2.5} className="shrink-0 text-mist" />
+              <ChevronRightIcon width={15} height={15} strokeWidth={2.5} className="shrink-0 text-ink" />
             </InfoPanel>
           </div>
           <div className="absolute -top-8 left-0">
-            <img src={profilePhotos.ellie} alt="" className="h-28 w-28 rounded-full border-4 border-white object-cover shadow-card" />
-            <span className="absolute right-1 top-1 h-4 w-4 rounded-full border-2 border-white bg-routine-fg" />
+            <img src={profilePhotos.ellie} alt="" className="h-28 w-28 rounded-full border-4 border-white object-cover shadow-soft" />
+            <span className="absolute right-1 top-1 h-4 w-4 rounded-full border-2 border-white bg-ink" />
           </div>
         </div>
 
-        <h1 className="mb-5 mt-6 text-center text-[26px] font-bold text-ink">Timeline</h1>
+        <h1 className="mb-5 mt-7 text-[30px] font-bold leading-tight tracking-tighter text-ink">Timeline</h1>
 
         {buckets.map((bucket) => (
-          <div key={bucket.label} className="mb-4 rounded-[8px] bg-white p-4 shadow-card last:mb-0">
-            <h2 className="text-xl font-bold leading-tight text-ink">{bucket.label}</h2>
-            <p className="mb-3 text-[11px] font-bold text-muted">{formatFullDate(bucket.groups[0].timestamp)}</p>
+          <div key={bucket.label} className="mb-4 rounded-card border border-line bg-white p-4 last:mb-0">
+            <h2 className="text-[19px] font-semibold tracking-tight leading-tight text-ink">{bucket.label}</h2>
+            <p className="mb-3 text-[11px] font-medium uppercase tracking-wide text-faint">{formatFullDate(bucket.groups[0].timestamp)}</p>
 
             {bucket.groups.map((group, i) => {
               const matched = matchProfile(profiles, group.author)
@@ -274,7 +274,7 @@ export default function Timeline() {
               return (
                 <div
                   key={group.sessionId}
-                  className={`${i > 0 ? 'mt-4 border-t border-sage-100 pt-4' : ''} ${railClass}`.trim()}
+                  className={`${i > 0 ? 'mt-4 border-t border-line pt-4' : ''} ${railClass}`.trim()}
                 >
                   <div className="flex items-center gap-2">
                     <span className="h-1.5 w-1.5 rounded-full bg-ink/20" />
@@ -287,18 +287,18 @@ export default function Timeline() {
                       {photo ? (
                         <img src={photo} alt="" className="h-11 w-11 shrink-0 rounded-full object-cover" />
                       ) : (
-                        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-sage-100 text-mist">
+                        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-track text-ink">
                           <UserIcon width={20} height={20} strokeWidth={1.8} />
                         </span>
                       )}
                       <div className="min-w-0">
-                        <p className="truncate text-[19px] font-bold leading-tight text-ink">
+                        <p className="truncate text-[17px] font-semibold tracking-tight leading-tight text-ink">
                           {matched?.name || group.author}
                         </p>
-                        <p className="truncate text-xs font-semibold leading-tight text-muted">{matched?.role || ''}</p>
+                        <p className="truncate text-xs font-medium leading-tight text-muted">{matched?.role || ''}</p>
                       </div>
                     </div>
-                    <span className="flex shrink-0 items-center gap-1.5 rounded-[8px] bg-[#e2f4eb] px-2.5 py-1.5 text-ink">
+                    <span className="flex shrink-0 items-center gap-1.5 rounded-card bg-track px-2.5 py-1.5 text-ink">
                       <UserIcon width={13} height={13} strokeWidth={2} />
                       <span className="text-[10px] font-semibold leading-tight">
                         Patient Status:
@@ -345,12 +345,12 @@ export default function Timeline() {
                   )}
 
                   {seeMeds && medItem && (
-                    <div className="mt-2.5 flex items-start gap-2.5 rounded-[8px] border border-mist bg-white p-3">
-                      <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-clay-50 text-clay-500">
+                    <div className="mt-2.5 flex items-start gap-2.5 rounded-card border border-line bg-white p-3">
+                      <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-track text-icon">
                         <PillIcon width={15} height={15} strokeWidth={2} />
                       </span>
                       <div className="min-w-0">
-                        <p className="text-[10px] font-bold leading-tight text-ink">Medication Administered</p>
+                        <p className="text-[10px] font-semibold uppercase tracking-wide leading-tight text-muted">Medication administered</p>
                         <p className="text-[10px] font-medium leading-tight text-ink">{formatMedGiven(medItem.medicationGiven)}</p>
                       </div>
                     </div>

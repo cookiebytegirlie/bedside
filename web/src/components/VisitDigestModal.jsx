@@ -22,7 +22,7 @@ function WorkingRow({ status, label }) {
 // reads as "computing" rather than "stuck".
 function SkeletonBlock({ lines = 2 }) {
   return (
-    <div className="space-y-3 rounded-[8px] bg-white p-4 shadow-card">
+    <div className="space-y-3 rounded-card border border-line bg-white p-4">
       {Array.from({ length: lines }).map((_, i) => (
         <div key={i} className="space-y-2">
           <div className="h-3.5 w-1/3 animate-pulse rounded bg-ink/10" />
@@ -72,16 +72,16 @@ export default function VisitDigestModal({ open, onClose, role, onReview }) {
       onClick={onClose}
     >
       <div
-        className="max-h-[88vh] w-full max-w-md overflow-y-auto rounded-t-[8px] bg-household p-5 shadow-card sm:rounded-[8px]"
+        className="max-h-[88vh] w-full max-w-md overflow-y-auto rounded-t-card border border-line bg-white p-5 shadow-soft sm:rounded-card"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex items-start justify-between gap-3">
           <div className="min-w-0">
             <h2 className="text-xl font-bold text-ink">Since your last visit</h2>
             <p className="text-[12px] font-semibold text-muted">{digest.lastVisit}</p>
-            <p className="mt-0.5 flex items-center gap-1.5 text-[11px] font-medium text-mist">
+            <p className="mt-0.5 flex items-center gap-1.5 text-[11px] font-medium text-muted">
               {loading && (
-                <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-watch-fg" aria-hidden />
+                <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-ink" aria-hidden />
               )}
               {attribution}
             </p>
@@ -117,7 +117,7 @@ export default function VisitDigestModal({ open, onClose, role, onReview }) {
         ) : (
         <div className="space-y-4">
           {seeMeds && (
-            <div className="rounded-[8px] border border-attention-fg/30 bg-white p-4">
+            <div className="rounded-card border border-attention-fg/30 bg-white p-4">
               <div className="mb-1.5 flex items-center gap-2 text-attention-fg">
                 <BellIcon width={17} height={17} strokeWidth={2} />
                 <p className="text-[15px] font-bold">Needs you · {digest.needsYou.count}</p>
@@ -126,7 +126,7 @@ export default function VisitDigestModal({ open, onClose, role, onReview }) {
               <button
                 type="button"
                 onClick={onReview}
-                className="mt-3 w-full rounded-[8px] border border-attention-fg/30 bg-attention-bg py-2.5 text-[14px] font-bold text-ink active:scale-[0.99]"
+                className="mt-3 w-full rounded-card border border-attention-fg/30 bg-attention-bg py-2.5 text-[14px] font-bold text-ink active:scale-[0.99]"
               >
                 {digest.needsYou.cta}
               </button>
@@ -134,7 +134,7 @@ export default function VisitDigestModal({ open, onClose, role, onReview }) {
           )}
 
           {seeMeds && (
-            <div className="rounded-[8px] border border-watch-fg/30 bg-white p-4">
+            <div className="rounded-card border border-watch-fg/30 bg-white p-4">
               <div className="mb-1.5 flex items-center gap-2 text-watch-fg">
                 <TrendUpIcon width={17} height={17} strokeWidth={2} />
                 <p className="text-[15px] font-bold">Bedside noticed a pattern</p>
@@ -145,12 +145,12 @@ export default function VisitDigestModal({ open, onClose, role, onReview }) {
 
           <section>
             <h3 className="mb-2 text-[15px] font-bold text-ink">What’s changed</h3>
-            <div className="space-y-3 rounded-[8px] bg-white p-4 shadow-card">
+            <div className="space-y-3 rounded-card border border-line bg-white p-4">
               {digest.changed.map((c) => {
                 const Icon = CHANGE_ICON[c.icon] || TrendDownIcon
                 return (
                   <div key={c.title} className="flex gap-3">
-                    <Icon width={17} height={17} strokeWidth={2} className="mt-0.5 shrink-0 text-mist" />
+                    <Icon width={17} height={17} strokeWidth={2} className="mt-0.5 shrink-0 text-icon" />
                     <div className="min-w-0">
                       <p className="text-[14px] font-bold text-ink">{c.title}</p>
                       <p className="text-[13px] font-medium leading-snug text-ink/70">{c.detail}</p>
@@ -163,7 +163,7 @@ export default function VisitDigestModal({ open, onClose, role, onReview }) {
 
           <section>
             <h3 className="mb-2 text-[15px] font-bold text-ink">What’s working</h3>
-            <div className="space-y-2.5 rounded-[8px] bg-white p-4 shadow-card">
+            <div className="space-y-2.5 rounded-card border border-line bg-white p-4">
               {working.map((w) => (
                 <WorkingRow key={w.label} status={w.status} label={w.label} />
               ))}

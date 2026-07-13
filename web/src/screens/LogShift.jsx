@@ -15,6 +15,11 @@ const LOCATION_OPTIONS = ['Living Room', 'Bedroom', 'Garden', 'Kitchen']
 // Plain-language name for each urgency flag, matching UrgencyPicker's labels.
 const URGENCY_LABEL = { green: 'Routine', yellow: 'Keep an eye on', red: 'Needs attention' }
 
+// Quiet warm-gray caps label that heads each grouped section, iOS-style.
+function GroupLabel({ children }) {
+  return <p className="mb-2 px-1 text-[12px] font-semibold uppercase tracking-[0.04em] text-faint">{children}</p>
+}
+
 function useSpeechRecognition(onResult) {
   const recognitionRef = useRef(null)
   const [listening, setListening] = useState(false)
@@ -57,27 +62,55 @@ function useSpeechRecognition(onResult) {
   return { listening, supported, toggle }
 }
 
-function OptionGrid({ label, options, value, onPick }) {
+// Single-select as an iOS inset grouped list: white rows, hairline separators
+// inset from the label, a trailing check on the selected row, which also
+// takes the soft gray fill.
+function ActivityList({ options, value, onPick }) {
   return (
-    <div>
-      <p className="mb-2 text-sm font-semibold text-muted">{label}</p>
-      <div className="grid grid-cols-2 gap-2">
-        {options.map((opt) => {
-          const active = value === opt
-          return (
-            <button
-              key={opt}
-              type="button"
-              onClick={() => onPick(opt)}
-              className={`rounded-2xl px-3 py-3 text-left text-sm font-bold shadow-card transition-colors active:scale-[0.98] ${
-                active ? 'bg-routine-bg text-ink' : 'bg-white text-ink'
-              }`}
-            >
+    <div className="overflow-hidden rounded-card border border-line bg-white">
+      {options.map((opt, i) => {
+        const active = value === opt
+        return (
+          <button
+            key={opt}
+            type="button"
+            onClick={() => onPick(opt)}
+            className={`relative flex min-h-[48px] w-full items-center justify-between px-4 py-3 text-left transition-colors active:bg-track ${
+              active ? 'bg-track' : 'bg-white'
+            }`}
+          >
+            {i > 0 && <span className="absolute left-4 right-0 top-0 h-px bg-line" />}
+            <span className={`text-[15px] tracking-tight ${active ? 'font-semibold text-ink' : 'font-medium text-ink'}`}>
               {opt}
-            </button>
-          )
-        })}
-      </div>
+            </span>
+            {active && <CheckIcon width={18} height={18} strokeWidth={2.5} className="shrink-0 text-ink" />}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+// Room selection as horizontal filter chips — the selected chip is a crisp
+// black pill; the rest are white with a hairline outline.
+function RoomChips({ options, value, onPick }) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      {options.map((opt) => {
+        const active = value === opt
+        return (
+          <button
+            key={opt}
+            type="button"
+            onClick={() => onPick(opt)}
+            className={`min-h-[40px] rounded-full border px-4 py-2 text-[14px] font-medium tracking-tight transition-colors active:scale-[0.98] ${
+              active ? 'border-transparent bg-ink text-white' : 'border-line bg-white text-ink'
+            }`}
+          >
+            {opt}
+          </button>
+        )
+      })}
     </div>
   )
 }
@@ -85,21 +118,25 @@ function OptionGrid({ label, options, value, onPick }) {
 function StatusSection({ sessionId, urgency }) {
   const { household, status, location, setPatientStatus } = useHousehold()
   return (
-    <section>
-      <h2 className="text-xl font-bold text-ink">Status</h2>
-      <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <OptionGrid
-          label={`${household.preferredName} is currently…`}
-          options={ACTIVITY_OPTIONS}
-          value={status}
-          onPick={(next) => setPatientStatus(next, location, sessionId, urgency)}
-        />
-        <OptionGrid
-          label="In the"
-          options={LOCATION_OPTIONS}
-          value={location}
-          onPick={(next) => setPatientStatus(status, next, sessionId, urgency)}
-        />
+    <section className="mt-7">
+      <GroupLabel>Status</GroupLabel>
+      <div className="space-y-5">
+        <div>
+          <p className="mb-2 px-1 text-[13px] font-medium text-muted">{household.preferredName} is currently…</p>
+          <ActivityList
+            options={ACTIVITY_OPTIONS}
+            value={status}
+            onPick={(next) => setPatientStatus(next, location, sessionId, urgency)}
+          />
+        </div>
+        <div>
+          <p className="mb-2 px-1 text-[13px] font-medium text-muted">In the</p>
+          <RoomChips
+            options={LOCATION_OPTIONS}
+            value={location}
+            onPick={(next) => setPatientStatus(status, next, sessionId, urgency)}
+          />
+        </div>
       </div>
     </section>
   )
@@ -130,40 +167,47 @@ function MedsSection({ sessionId, urgency }) {
   }
 
   return (
-    <section className="mt-6">
-      <h2 className="text-xl font-bold text-ink">Medication Administered</h2>
-      <div className="mt-3 space-y-2.5">
-        {carePlan.medications.map((med) => {
+    <section className="mt-7">
+      <GroupLabel>Medication administered</GroupLabel>
+      <div className="overflow-hidden rounded-card border border-line bg-white">
+        {carePlan.medications.map((med, i) => {
           const isGiven = Boolean(given[med.name])
           return (
             <button
               key={med.name}
               type="button"
               onClick={() => handleTap(med)}
-              className={`flex w-full items-center gap-3 rounded-3xl px-4 py-3 text-left shadow-card transition-colors active:scale-[0.98] ${
-                isGiven ? 'bg-routine-bg' : 'bg-white'
+              className={`relative flex min-h-[60px] w-full items-center gap-3 px-4 py-3 text-left transition-colors active:bg-track ${
+                isGiven ? 'bg-track' : 'bg-white'
               }`}
             >
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-clay-50 text-clay-500">
+              {i > 0 && <span className="absolute left-16 right-0 top-0 h-px bg-line" />}
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-track text-icon">
                 <PillIcon width={18} height={18} strokeWidth={2} />
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block text-base font-bold text-ink">{med.name}</span>
-                <span className="block text-sm font-semibold text-muted">{med.dose} · {med.schedule}</span>
+                <span className="block text-[15px] font-medium tracking-tight text-ink">{med.name}</span>
+                <span className="block text-[13px] font-medium text-muted">{med.dose} · {med.schedule}</span>
               </span>
+              {isGiven ? (
+                <CheckIcon width={19} height={19} strokeWidth={2.5} className="shrink-0 text-ink" />
+              ) : (
+                <span className="h-5 w-5 shrink-0 rounded-full border-[1.5px] border-line" />
+              )}
             </button>
           )
         })}
 
         {activeMed && (
-          <div className="flex items-center gap-2 rounded-2xl bg-routine-bg px-3 py-2.5">
-            <span className="shrink-0 text-sm font-bold text-ink">Add note:</span>
+          <div className="relative flex items-center gap-2.5 bg-track px-4 py-3">
+            <span className="absolute left-4 right-0 top-0 h-px bg-line" />
+            <span className="shrink-0 text-[13px] font-semibold text-ink">Note</span>
             <input
               autoFocus
               value={note}
               onChange={(e) => handleNoteChange(e.target.value)}
               placeholder={`Why was ${activeMed} given?`}
-              className="min-w-0 flex-1 bg-transparent text-sm font-medium text-ink placeholder:text-ink/40 focus:outline-none"
+              className="min-w-0 flex-1 bg-transparent text-[14px] font-medium text-ink placeholder:text-faint focus:outline-none"
             />
           </div>
         )}
@@ -226,23 +270,23 @@ function NotesSection({ sessionId, flag, setFlag, escalated }) {
   }
 
   return (
-    <section className="mt-6">
-      <h2 className="text-xl font-bold text-ink">Notes</h2>
+    <section className="mt-7">
+      <GroupLabel>Notes</GroupLabel>
 
       {stage === 'idle' && (
-        <div className="mt-3 rounded-[8px] bg-white p-5 shadow-card">
+        <div className="rounded-card border border-line bg-white p-4">
           <div className="flex items-center gap-3">
             <button
               type="button"
               onClick={toggle}
               disabled={!supported}
-              className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-colors disabled:opacity-40 ${
-                listening ? 'animate-pulse bg-clay-500 text-white' : 'bg-mist text-white'
+              className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white transition-colors disabled:opacity-40 ${
+                listening ? 'animate-pulse bg-attention-solid' : 'bg-ink'
               }`}
             >
               <MicIcon width={20} height={20} strokeWidth={2} />
             </button>
-            <p className="text-sm font-medium leading-snug text-ink">
+            <p className="text-[14px] font-medium leading-snug text-ink">
               {supported
                 ? listening
                   ? 'Listening… tap to stop.'
@@ -255,9 +299,9 @@ function NotesSection({ sessionId, flag, setFlag, escalated }) {
             onChange={(e) => setTranscript(e.target.value)}
             placeholder="Example: Ellie was restless before bed and short of breath. Repositioned and gave PRN morphine; settled within twenty minutes."
             rows={4}
-            className="mt-4 w-full resize-none rounded-[8px] border border-sage-200 bg-transparent p-3 text-base font-medium text-ink placeholder:text-ink/40 focus:border-mist focus:outline-none"
+            className="mt-4 w-full resize-none rounded-btn border border-line bg-white p-3 text-[15px] font-medium leading-snug text-ink placeholder:text-faint focus:border-ink focus:outline-none focus:ring-1 focus:ring-ink/20"
           />
-          <p className="mt-3 text-center text-xs leading-snug text-ink/35">
+          <p className="mt-3 text-center text-[12px] leading-snug text-faint">
             Voice notes are processed by your browser's speech service. This demo uses synthetic data only — a real
             deployment would use on-device or BAA-covered transcription.
           </p>
@@ -265,7 +309,7 @@ function NotesSection({ sessionId, flag, setFlag, escalated }) {
             type="button"
             onClick={process}
             disabled={!transcript.trim()}
-            className="mt-4 w-full rounded-full bg-mist py-3.5 text-lg font-bold text-white transition-opacity disabled:opacity-40"
+            className="mt-4 w-full rounded-btn bg-ink py-3.5 text-[16px] font-semibold text-white transition-opacity active:scale-[0.99] disabled:opacity-40"
           >
             Summarize with AI
           </button>
@@ -273,27 +317,27 @@ function NotesSection({ sessionId, flag, setFlag, escalated }) {
       )}
 
       {stage === 'processing' && (
-        <div className="mt-3 flex items-center gap-3 rounded-[8px] bg-white p-5 shadow-card">
-          <RefreshIcon width={22} height={22} strokeWidth={2} className="shrink-0 animate-spin text-mist" />
-          <p className="text-base font-semibold text-ink">Summarizing with Bedside AI…</p>
+        <div className="flex items-center gap-3 rounded-card border border-line bg-white p-5">
+          <RefreshIcon width={22} height={22} strokeWidth={2} className="shrink-0 animate-spin text-ink" />
+          <p className="text-[15px] font-medium text-ink">Summarizing with Bedside AI…</p>
         </div>
       )}
 
       {stage === 'result' && result && (
-        <div className="mt-3 space-y-3">
+        <div className="space-y-3">
           <AiResultCard transcript={transcript} result={result} seeMeds={seeMeds} />
 
           {/* The caregiver's flag is authoritative. When the AI reads the note
               differently, offer its call as a recommendation with reasoning —
               they decide whether to adopt it or keep their own flag. */}
           {result.urgency !== flag && !recDismissed && (
-            <div className="rounded-[8px] bg-white p-4 shadow-card ring-2 ring-mist/40">
-              <div className="flex items-start gap-2">
-                <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-sage-100 text-mist">
+            <div className="rounded-card border border-ink/30 bg-white p-4">
+              <div className="flex items-start gap-2.5">
+                <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-track text-ink">
                   <SparklesIcon width={15} height={15} strokeWidth={2} />
                 </span>
                 <div className="min-w-0">
-                  <p className="text-sm font-bold text-ink">
+                  <p className="text-[14px] font-semibold tracking-tight text-ink">
                     Bedside AI suggests “{URGENCY_LABEL[result.urgency]}”
                   </p>
                   {(result.urgency_reason || result.reasoning) && (
@@ -310,14 +354,14 @@ function NotesSection({ sessionId, flag, setFlag, escalated }) {
                 <button
                   type="button"
                   onClick={() => setFlag(result.urgency)}
-                  className="flex-1 rounded-full bg-mist py-2.5 text-sm font-bold text-white active:scale-[0.98]"
+                  className="flex-1 rounded-full bg-ink py-2.5 text-[13px] font-semibold text-white active:scale-[0.98]"
                 >
                   Use “{URGENCY_LABEL[result.urgency]}”
                 </button>
                 <button
                   type="button"
                   onClick={() => setRecDismissed(true)}
-                  className="flex-1 rounded-full border border-sage-200 py-2.5 text-sm font-bold text-muted active:scale-[0.98]"
+                  className="flex-1 rounded-full border border-line py-2.5 text-[13px] font-semibold text-muted active:scale-[0.98]"
                 >
                   Keep “{URGENCY_LABEL[flag]}”
                 </button>
@@ -329,14 +373,14 @@ function NotesSection({ sessionId, flag, setFlag, escalated }) {
             <button
               type="button"
               onClick={reset}
-              className="flex-1 rounded-full border border-sage-200 py-3 text-base font-bold text-muted"
+              className="flex-1 rounded-btn border border-line py-3 text-[15px] font-semibold text-muted active:scale-[0.99]"
             >
               Start over
             </button>
             <button
               type="button"
               onClick={save}
-              className="flex-1 rounded-full bg-mist py-3 text-base font-bold text-white"
+              className="flex-1 rounded-btn bg-ink py-3 text-[15px] font-semibold text-white active:scale-[0.99]"
             >
               {result.confidence === 'low' ? 'Confirm & save' : 'Save to timeline'}
             </button>
@@ -345,9 +389,9 @@ function NotesSection({ sessionId, flag, setFlag, escalated }) {
       )}
 
       {stage === 'saved' && (
-        <div className="mt-3 flex items-center gap-2 rounded-[8px] bg-routine-bg p-4 text-routine-fg">
+        <div className="flex items-center gap-2 rounded-card bg-track p-4 text-ink">
           <CheckIcon width={18} height={18} strokeWidth={3} className="shrink-0" />
-          <p className="text-[15px] font-bold">Saved to the timeline</p>
+          <p className="text-[15px] font-semibold">Saved to the timeline</p>
         </div>
       )}
     </section>
@@ -377,13 +421,13 @@ export default function LogShift() {
   return (
     <>
       <OnDutyHeader />
-      <main className="bg-household flex-1 px-5 pb-6 pt-6">
-        <h1 className="mb-5 text-center text-2xl font-bold text-ink">Log New Entry</h1>
+      <main className="flex-1 bg-white px-4 pb-10 pt-6">
+        <h1 className="mb-6 text-[30px] font-bold leading-tight tracking-tighter text-ink">Log new entry</h1>
 
-        <div className="mb-6 rounded-3xl bg-white p-4 shadow-card">
-          <p className="mb-2 text-sm font-bold text-ink">Flag this entry</p>
+        <section>
+          <GroupLabel>Flag this entry</GroupLabel>
           <UrgencyPicker value={flag} onChange={setFlag} />
-        </div>
+        </section>
 
         {/* The flag is the single source of urgency for the whole entry, so a
             "Needs attention" flag escalates once here — whether it's a
@@ -392,7 +436,7 @@ export default function LogShift() {
             caregiver actually keeps). The status/meds taps below carry the same
             flag onto their Timeline entries. */}
         {flag === 'red' && (
-          <div className="mb-6">
+          <div className="mt-4">
             <EscalationFlow
               trigger={{
                 quote: "I'm flagging this as needs attention.",
