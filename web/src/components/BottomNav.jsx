@@ -14,7 +14,7 @@ export default function BottomNav() {
   const base = `/household/${householdId}`
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-20 border-t border-sage-100 bg-white/90 backdrop-blur pb-[env(safe-area-inset-bottom)] lg:hidden">
+    <nav className="fixed bottom-0 left-0 right-0 z-20 border-t border-line bg-white/90 backdrop-blur pb-[env(safe-area-inset-bottom)] lg:hidden">
       <div className="mx-auto flex max-w-md">
         {TABS.map(({ to, label, icon: Icon, end }) => (
           <NavLink
@@ -22,8 +22,8 @@ export default function BottomNav() {
             to={`${base}${to ? `/${to}` : ''}`}
             end={end}
             className={({ isActive }) =>
-              `flex flex-1 flex-col items-center gap-1 py-2.5 text-xs font-bold transition-colors ${
-                isActive ? 'text-mist' : 'text-muted'
+              `flex min-h-[44px] flex-1 flex-col items-center gap-1 py-2 text-[11px] tracking-tight transition-colors ${
+                isActive ? 'font-semibold text-ink' : 'font-medium text-faint'
               }`
             }
           >

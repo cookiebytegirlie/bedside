@@ -25,7 +25,7 @@ export default function AiSourceDisclosure({ reasoning, source, sourceHref, conf
   // implies there's evidence to inspect.
   if (!source && !reasoning) {
     return (
-      <div className="mt-1.5 flex items-start gap-1.5 rounded-[8px] bg-watch-bg px-2.5 py-1.5 text-[11px] font-semibold text-watch-fg">
+      <div className="mt-1.5 flex items-start gap-1.5 rounded-card bg-watch-tint px-2.5 py-1.5 text-[11px] font-semibold text-watch-fg">
         <InfoIcon width={12} height={12} strokeWidth={2} className="mt-[1px] shrink-0" />
         Not sourced from the care plan or notes — please verify independently.
       </div>
@@ -34,15 +34,15 @@ export default function AiSourceDisclosure({ reasoning, source, sourceHref, conf
 
   return (
     <div
-      className={`mt-1.5 overflow-hidden rounded-[8px] border ${
-        lowConfidence ? 'border-watch-fg/40 ring-1 ring-watch-fg/30' : 'border-sage-100'
+      className={`mt-1.5 overflow-hidden rounded-card border ${
+        lowConfidence ? 'border-watch-solid/40 ring-1 ring-watch-solid/30' : 'border-line'
       }`}
     >
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
-        className="flex w-full items-center gap-1.5 px-2.5 py-1.5 text-left text-mist"
+        className="flex w-full items-center gap-1.5 px-2.5 py-1.5 text-left text-ink"
       >
         <BookIcon width={12} height={12} strokeWidth={2} className="shrink-0" />
         <span className="min-w-0 flex-1 text-[11px] font-bold">How we know this</span>
@@ -69,16 +69,16 @@ export default function AiSourceDisclosure({ reasoning, source, sourceHref, conf
           {source ? (
             sourceHref ? (
               sourceHref.startsWith('#') ? (
-                <a href={sourceHref} className="inline-flex items-center gap-1 text-[11px] font-bold text-mist underline underline-offset-2">
+                <a href={sourceHref} className="inline-flex items-center gap-1 text-[11px] font-bold text-ink underline underline-offset-2">
                   {source}
                 </a>
               ) : (
-                <Link to={sourceHref} className="inline-flex items-center gap-1 text-[11px] font-bold text-mist underline underline-offset-2">
+                <Link to={sourceHref} className="inline-flex items-center gap-1 text-[11px] font-bold text-ink underline underline-offset-2">
                   {source}
                 </Link>
               )
             ) : (
-              <p className="text-[11px] font-bold text-mist">{source}</p>
+              <p className="text-[11px] font-bold text-ink">{source}</p>
             )
           ) : (
             <p className="text-[11px] font-semibold text-watch-fg">
