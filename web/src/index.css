@@ -1,4 +1,7 @@
-@import url('https://fonts.googleapis.com/css2?family=Darker+Grotesque:wght@500;600;700;800&display=swap');
+/* Inter is the cross-platform face; Apple devices get SF Pro via the system
+   stack in tokens.js and never download this. Weights: 400 body, 500/600 for
+   emphasis, 700 reserved for large titles. */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -9,16 +12,18 @@ html, body, #root {
 }
 
 body {
-  background-color: #f6f1e9;
-  color: #000000;
-  /* Tailwind's preflight doesn't retroactively apply a custom
-     theme.fontFamily.sans to body/html on its own — it has to be set
-     explicitly, or every element silently falls back to the browser
-     default sans-serif stack instead of Darker Grotesque. */
-  font-family: 'Darker Grotesque', system-ui, -apple-system, sans-serif;
+  /* Pure white everywhere — grouped content is separated with hairlines and
+     soft gray fills, not colored page washes. */
+  background-color: #ffffff;
+  color: #18181b;
+  /* Tailwind's preflight doesn't retroactively apply theme.fontFamily.sans to
+     body/html on its own — set it explicitly so every element inherits the
+     SF Pro / Inter stack instead of the browser default. */
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', system-ui, sans-serif;
+  letter-spacing: -0.011em; /* subtle app-wide tightening; titles go tighter */
   -webkit-tap-highlight-color: transparent;
-  /* Avoid single-word "widows" dangling on their own line at the end of
-     any wrapped text. `text-wrap` inherits, so this applies app-wide. */
+  /* Avoid single-word "widows" dangling on their own line at the end of any
+     wrapped text. `text-wrap` inherits, so this applies app-wide. */
   text-wrap: pretty;
 }
 
@@ -29,10 +34,12 @@ h1, h2, h3 {
 
 * {
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Household gradient wash — sage green fading to warm clay, used behind
-   every screen in the Figma redesign rather than a flat cream fill. */
+/* Household gradient wash — retained only for the screens not yet restyled to
+   the white monochrome system. Restyled screens use pure-white surfaces
+   separated by hairlines. */
 .bg-household {
   background-image: linear-gradient(180deg, rgba(220, 231, 220, 0.78) 0%, rgba(234, 216, 205, 0.78) 100%),
     linear-gradient(90deg, #ffffff 0%, #ffffff 100%);
