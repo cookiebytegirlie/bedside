@@ -1,5 +1,6 @@
 import { useNavigate, useParams } from 'react-router-dom'
 import { useHousehold } from '../state/HouseholdContext'
+import { canSeeMeds } from '../utils/roles'
 import { formatCountdown, isWithinWindow, minutesUntil, formatMinutesLeft } from '../utils/time'
 import { householdLogo } from '../assets'
 import { BellIcon, PowerIcon } from './icons'
@@ -9,9 +10,12 @@ import { BellIcon, PowerIcon } from './icons'
 // app. Shows whoever is currently on-duty (a scheduled Volunteer/Aide
 // whose shift window is open right now) plus session controls.
 export default function OnDutyHeader() {
-  const { activeProfile, secondsUntilTimeout } = useHousehold()
+  const { activeProfile, secondsUntilTimeout, unreadNotificationCount } = useHousehold()
   const navigate = useNavigate()
   const { householdId } = useParams()
+  // The bell + its unread badge are for the nurse/family audience only,
+  // matching the notification center's own role gate.
+  const showInbox = canSeeMeds(activeProfile?.role)
   const hasOpenShiftWindow =
     activeProfile?.schedule && isWithinWindow(activeProfile.schedule.startHour, activeProfile.schedule.endHour)
   const shiftMinutesLeft = hasOpenShiftWindow ? minutesUntil(activeProfile.schedule.endHour) : null
@@ -38,8 +42,22 @@ export default function OnDutyHeader() {
           <div className="shrink-0 text-right">
             <p className="text-[10px] font-medium text-faint">{formatCountdown(secondsUntilTimeout)} until auto logout</p>
             <div className="mt-2 flex items-center justify-end gap-3 text-ink">
-              <button type="button" aria-label="Notifications">
+              <button
+                type="button"
+                aria-label={
+                  showInbox && unreadNotificationCount > 0
+                    ? `Notifications, ${unreadNotificationCount} unread`
+                    : 'Notifications'
+                }
+                onClick={() => navigate(`/household/${householdId}/inbox`)}
+                className="relative"
+              >
                 <BellIcon width={22} height={22} strokeWidth={1.8} />
+                {showInbox && unreadNotificationCount > 0 && (
+                  <span className="absolute -right-1.5 -top-1.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-attention-fg px-1 text-[9px] font-bold leading-none text-white">
+                    {unreadNotificationCount}
+                  </span>
+                )}
               </button>
               <button
                 type="button"

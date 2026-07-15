@@ -6,10 +6,10 @@ import OnDutyHeader from '../components/OnDutyHeader'
 import UrgencyBadge from '../components/UrgencyBadge'
 import VisitDigestModal from '../components/VisitDigestModal'
 import InfoPanel from '../components/InfoPanel'
-import { canSeeMeds, isNurse } from '../utils/roles'
+import { canSeeMeds } from '../utils/roles'
 import { fetchLogEntries } from '../lib/db'
 import { visitDigest } from '../mockData'
-import { PillIcon, UserIcon, BookIcon, ChevronRightIcon, SparklesIcon, CheckIcon, XIcon, PhoneIcon } from '../components/icons'
+import { PillIcon, UserIcon, BookIcon, ChevronRightIcon, SparklesIcon, CheckIcon, XIcon, PhoneIcon, AlertTriangleIcon } from '../components/icons'
 
 // Auto-open the digest only the first time the homepage mounts this session
 // (survives in-app remounts; a full reload resets it).
@@ -29,11 +29,115 @@ function mapRemoteRow(row) {
     summary: ai.summary ?? row.raw_text ?? '',
     urgency: row.urgency_tag ?? ai.urgency ?? 'green',
     rawTranscript: row.raw_text,
-    medicationGiven: med ? { name: med.name, time: med.time } : undefined,
+    // Pass through the full med record when the source has it, so complete
+    // rows render completely; formatMedGiven omits any field that's missing.
+    medicationGiven: med
+      ? {
+          name: med.name,
+          time: med.time,
+          ...(med.dose ? { dose: med.dose } : {}),
+          ...(med.route ? { route: med.route } : {}),
+          ...(med.reason ? { reason: med.reason } : {}),
+        }
+      : undefined,
+    // Surface escalation / disagreement metadata when present so the remote
+    // sanitizer can tell a real escalation (has escalatedAt) or disagreement
+    // (has aiUrgency) from a legacy row that has neither.
+    ...(row.escalatedAt || ai.escalatedAt ? { escalatedAt: row.escalatedAt ?? ai.escalatedAt } : {}),
+    ...(ai.aiUrgency ? { aiUrgency: ai.aiUrgency } : {}),
+    ...(ai.keptUrgency ? { keptUrgency: ai.keptUrgency } : {}),
   }
 }
 
+// ── Remote-log sanitizer (display layer) ────────────────────────────────────
+// Applies to REMOTE (Supabase) rows only — the seed / in-memory logs are
+// already correct and never pass through here. Validation is principled, not
+// id-based, so it keeps guarding even after the junk rows are deleted at the
+// source.
+
+// Retired aliases from before the household restructure — any remote row that
+// names one is stale. Word-boundary + case-insensitive so it won't trip on
+// "been", "Bedside", "Anand", etc.
+const RETIRED_NAME_RE = /\b(?:bee|anna)\b/i
+
+// Prose that asserts an escalation already happened. On a calm-tagged row that
+// carries neither escalation nor disagreement metadata, the tag and the text
+// simply don't agree.
+const ESCALATION_ASSERTION_RE = /nurse has been notified|paged|911|unresponsive|severe respiratory distress/i
+
+const DUP_WINDOW_MS = 5 * 60 * 1000
+
+function summarySnippet(text, max = 60) {
+  const t = (text || '').replace(/\s+/g, ' ').trim()
+  return t.length > max ? `${t.slice(0, max - 1)}…` : t
+}
+
+// Drop a remote log if it (0) is empty (no summary and no transcript),
+// (1) names a retired alias, (2) pairs a calm tag with escalation prose but has
+// no escalation/disagreement metadata to justify it, or (3) duplicates an
+// earlier row (same author + summary within ~5 min). Each drop is
+// console.warn'd with id, author, urgency, a summary snippet, and why.
+function sanitizeRemoteLogs(logs) {
+  const drop = (row, reason) => {
+    console.warn('[Timeline] dropped remote log', {
+      id: row.id,
+      author: row.author,
+      urgency: row.urgency,
+      summary: summarySnippet(row.summary),
+      reason,
+    })
+  }
+
+  // Oldest-first so the earliest of any duplicate set is the one kept.
+  const byTime = [...logs].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp))
+  const kept = []
+
+  for (const row of byTime) {
+    // 0) Empty — nothing to show (no summary and no transcript).
+    if (!row.summary?.trim() && !row.rawTranscript?.trim()) {
+      drop(row, 'empty: no summary or transcript')
+      continue
+    }
+
+    // 1) Retired-name reference — author or narrative text.
+    const named = `${row.author ?? ''} ${row.summary ?? ''} ${row.rawTranscript ?? ''}`
+    if (RETIRED_NAME_RE.test(named)) {
+      drop(row, 'retired-name reference')
+      continue
+    }
+
+    // 2) Incoherent severity — calm tag over escalation prose, and no
+    //    structural evidence (escalatedAt / aiUrgency) that either happened.
+    const calmTag = row.urgency === 'green' || row.urgency === 'yellow'
+    const assertsEscalation = ESCALATION_ASSERTION_RE.test(`${row.summary ?? ''} ${row.rawTranscript ?? ''}`)
+    if (calmTag && assertsEscalation && !row.escalatedAt && !row.aiUrgency) {
+      drop(row, 'incoherent severity: calm tag over escalation prose')
+      continue
+    }
+
+    // 3) Duplicate — same author + summary within the window; keep earliest.
+    const isDupe = kept.some(
+      (k) =>
+        k.author === row.author &&
+        k.summary === row.summary &&
+        Math.abs(new Date(row.timestamp) - new Date(k.timestamp)) <= DUP_WINDOW_MS
+    )
+    if (isDupe) {
+      drop(row, 'duplicate: same author + summary within 5 min')
+      continue
+    }
+
+    kept.push(row)
+  }
+
+  return kept
+}
+
 const URGENCY_RANK = { green: 1, yellow: 2, red: 3 }
+
+// Plain-language name for the urgency a caregiver kept, used in the passive
+// "flagged for review" awareness note (AI read red, human logged it lower).
+const KEPT_WORD = { green: 'routine', yellow: 'keep an eye on', red: 'needs attention' }
 
 function formatTime(iso) {
   return new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
@@ -54,15 +158,48 @@ function dayLabel(iso) {
   return d.toLocaleDateString(undefined, { month: 'long', day: 'numeric' })
 }
 
-// Log authors are freeform strings like "Marcus (volunteer)" — match them
-// back to a real profile (for photo + a clean role label) by first name.
+// Strip a trailing "(role)" suffix — "Marcus (volunteer)" → "Marcus".
+function cleanAuthorName(author) {
+  return (author ?? '').replace(/\s*\([^)]*\)\s*$/, '').trim()
+}
+
+// Parse any author/name string into a first name and an optional last initial:
+//   "Daniel V."   → { first: 'Daniel', initial: 'V' }
+//   "Daniel Voss" → { first: 'Daniel', initial: 'V' }
+//   "Daniel"      → { first: 'Daniel', initial: '' }
+//   "Marcus F."   → { first: 'Marcus', initial: 'F' }
+function parseName(str) {
+  const parts = cleanAuthorName(str).split(/\s+/).filter(Boolean)
+  const last = parts.length > 1 ? parts[parts.length - 1] : ''
+  return { first: parts[0] || '', initial: last ? last[0] : '' }
+}
+
+// Resolve a log author — in ANY format ("Daniel V.", "Daniel Voss",
+// "Daniel (family)") — back to its profile for a photo, full name, and role.
+// Match on first name (case-insensitive); only require the last initial to
+// agree when BOTH the author and the profile carry one, so "Marcus F." still
+// resolves to the "Marcus" profile while a differing initial can disambiguate
+// two same-first-name people. Arbitrary guest names ("Lauren") match nothing —
+// that's expected; they render cleanly by their given name instead.
 function matchProfile(profiles, author) {
-  const baseName = author.replace(/\s*\([^)]*\)\s*$/, '').trim()
-  return profiles.find((p) => p.name === baseName || p.name.startsWith(baseName))
+  const a = parseName(author)
+  if (!a.first) return undefined
+  return profiles.find((p) => {
+    const pn = parseName(p.name)
+    if (a.first.toLowerCase() !== pn.first.toLowerCase()) return false
+    if (a.initial && pn.initial) return a.initial.toLowerCase() === pn.initial.toLowerCase()
+    return true
+  })
 }
 
 function formatMedGiven(m) {
-  return `“${m.name} ${m.dose} ${m.route} @ ${m.time} for ${m.reason}”`
+  // Only include fields that are present so a partial record never renders the
+  // literal "undefined" (e.g. "morphine oral solution @ 20:20" with no
+  // dose/route/reason).
+  const head = [m.name, m.dose, m.route].filter(Boolean).join(' ')
+  const time = m.time ? ` @ ${m.time}` : ''
+  const reason = m.reason ? ` for ${m.reason}` : ''
+  return `“${head}${time}${reason}”`
 }
 
 // Structured comfort-measure outcomes (from ShiftEnd) → past-tense label,
@@ -146,7 +283,7 @@ function bucketByDay(groups) {
 export default function Timeline() {
   const { householdId } = useParams()
   const navigate = useNavigate()
-  const { logs, status, location, household, profiles, activeProfile } = useHousehold()
+  const { logs, status, location, household, profiles, activeProfile, notifications, contacts } = useHousehold()
   const seeMeds = canSeeMeds(activeProfile?.role)
 
   // Hydrate the timeline from Supabase (if configured), merged with the seed /
@@ -155,7 +292,9 @@ export default function Timeline() {
   useEffect(() => {
     let cancelled = false
     fetchLogEntries().then((rows) => {
-      if (!cancelled) setRemoteLogs(rows.map(mapRemoteRow))
+      // Sanitize the REMOTE rows only — the seed / in-memory `logs` are already
+      // clean and never routed through here.
+      if (!cancelled) setRemoteLogs(sanitizeRemoteLogs(rows.map(mapRemoteRow)))
     })
     return () => {
       cancelled = true
@@ -256,30 +395,43 @@ export default function Timeline() {
               const triedItems = group.items.flatMap((l) => (Array.isArray(l.tried) ? l.tried : []))
               const escalatedItem = group.items.find((l) => l.escalatedAt)
               const rawItem = group.items.find((l) => l.rawTranscript)
+              // AI read "red" but the caregiver logged it lower — a passive
+              // awareness item for the nurse/primary caregiver, never a page.
+              const reviewItem = group.items.find(
+                (l) => l.aiUrgency === 'red' && l.keptUrgency && l.keptUrgency !== 'red'
+              )
 
-              // Colored left rail: red for a flagged group, green once a
-              // group has fully settled — i.e. every entry is routine and an
-              // earlier group the same day (later in this newest-first list)
-              // was red.
-              const allGreen = group.items.every((l) => (l.urgency ?? 'green') === 'green')
-              const priorRedSameDay = bucket.groups.slice(i + 1).some((g) => g.urgency === 'red')
-              const settled = allGreen && priorRedSameDay
-              const railClass =
-                group.urgency === 'red'
-                  ? 'border-l-2 border-attention-fg pl-3'
-                  : settled
-                    ? 'border-l-2 border-routine-fg pl-3'
-                    : ''
+              // A red entry's escalation is "resolved" once its notification —
+              // keyed by the escalated log's id — has been marked resolved.
+              const escalationResolved =
+                group.urgency === 'red' &&
+                escalatedItem &&
+                notifications.some((n) => n.id === escalatedItem.id && n.status === 'resolved')
+
+              // The handling note left when this entry's notification (escalation
+              // or disagreement) was acknowledged/resolved — closes the loop by
+              // showing not just that it was handled but how.
+              const reviewNotif = notifications.find(
+                (n) =>
+                  (n.id === escalatedItem?.id || n.id === reviewItem?.id) &&
+                  (n.status === 'acknowledged' || n.status === 'resolved') &&
+                  n.note
+              )
 
               return (
                 <div
                   key={group.sessionId}
-                  className={`${i > 0 ? 'mt-4 border-t border-line pt-4' : ''} ${railClass}`.trim()}
+                  className={i > 0 ? 'mt-4 border-t border-line pt-4' : ''}
                 >
                   <div className="flex items-center gap-2">
                     <span className="h-1.5 w-1.5 rounded-full bg-ink/20" />
                     <span className="text-[13px] font-semibold text-muted">{formatTime(group.timestamp)}</span>
-                    <UrgencyBadge urgency={group.urgency} />
+                    <UrgencyBadge urgency={group.urgency} className={escalationResolved ? 'line-through' : ''} />
+                    {escalationResolved && (
+                      <span className="inline-flex items-center rounded-full bg-routine-tint px-2.5 py-1 text-[11px] font-semibold tracking-tight text-routine-fg">
+                        Resolved
+                      </span>
+                    )}
                   </div>
 
                   <div className="mt-2 flex items-start justify-between gap-3">
@@ -293,7 +445,7 @@ export default function Timeline() {
                       )}
                       <div className="min-w-0">
                         <p className="truncate text-[17px] font-semibold tracking-tight leading-tight text-ink">
-                          {matched?.name || group.author}
+                          {matched?.name || cleanAuthorName(group.author)}
                         </p>
                         <p className="truncate text-xs font-medium leading-tight text-muted">{matched?.role || ''}</p>
                       </div>
@@ -340,6 +492,40 @@ export default function Timeline() {
                     </div>
                   )}
 
+                  {/* Ownership of a needs-attention flag is always explicit. */}
+                  {escalatedItem && (
+                    <p className="mt-1 text-[11px] font-medium text-muted">
+                      Owned by {contacts.hospiceTeam[0].name} · on-call nurse
+                    </p>
+                  )}
+
+                  {/* Passive AI-disagreement awareness — amber (watch), not red,
+                      and only shown to the nurse and primary caregiver. */}
+                  {seeMeds && reviewItem && (
+                    <div className="mt-2 flex items-start gap-1.5 rounded-card border border-watch-fg/30 bg-white px-2.5 py-2">
+                      <AlertTriangleIcon width={14} height={14} strokeWidth={2} className="mt-0.5 shrink-0 text-watch-fg" />
+                      <div className="min-w-0">
+                        <p className="text-[12px] font-semibold leading-snug text-watch-fg">Bedside flagged this for review</p>
+                        <p className="mt-0.5 text-[11px] font-medium leading-snug text-ink/70">
+                          Logged as {KEPT_WORD[reviewItem.keptUrgency] ?? reviewItem.keptUrgency} by the caregiver —
+                          shared with the nurse and primary caregiver for awareness.
+                        </p>
+                        {reviewItem.aiUrgencyReason && (
+                          <p className="mt-0.5 text-[11px] font-medium italic leading-snug text-ink/55">
+                            Bedside read: “{reviewItem.aiUrgencyReason}”
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* How the escalation / flag was handled — closes the loop. */}
+                  {seeMeds && reviewNotif && (
+                    <p className="mt-2 text-[11px] font-medium leading-snug text-muted">
+                      Reviewed by {reviewNotif.by ?? 'someone'}: {reviewNotif.note}
+                    </p>
+                  )}
+
                   {rawItem && (
                     <OwnWordsToggle authorFirst={firstNameOf(group.author)} text={rawItem.rawTranscript} />
                   )}
@@ -366,9 +552,9 @@ export default function Timeline() {
         open={digestOpen}
         onClose={() => setDigestOpen(false)}
         role={activeProfile?.role}
-        onReview={() => {
+        onOpenInbox={() => {
           setDigestOpen(false)
-          if (isNurse(activeProfile?.role)) navigate(`/household/${householdId}/settings/request-med`)
+          navigate(`/household/${householdId}/inbox`)
         }}
       />
     </>

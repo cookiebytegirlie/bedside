@@ -28,6 +28,36 @@ function initialsFor(name) {
   return parts.slice(0, 2).map((p) => p[0]?.toUpperCase() ?? '').join('') || '?'
 }
 
+// The notification center aggregates the two actionable kinds of log entry:
+// escalations (a human-confirmed red that paged the nurse) and disagreements
+// (Bedside read "red" but the caregiver logged it lower). `stateMap` holds the
+// per-entry handled state; anything absent is still "new". Newest first.
+function buildNotifications(logs, stateMap) {
+  const items = []
+  for (const l of logs) {
+    // Per-entry handled state is an object { status, note, by, at }; absent =
+    // still "new". Carry note/by/at onto the item so the inbox detail and the
+    // timeline can show how something was handled.
+    const st = stateMap[l.id]
+    const meta = {
+      status: st?.status || 'new',
+      note: st?.note ?? null,
+      by: st?.by ?? null,
+      at: st?.at ?? null,
+      // A family "seen" is tracked separately from the clinical status — it
+      // records awareness without resolving anything.
+      familySeenBy: st?.familySeenBy ?? null,
+      familySeenAt: st?.familySeenAt ?? null,
+    }
+    if (l.escalatedAt) {
+      items.push({ id: l.id, kind: 'escalation', log: l, timestamp: l.escalatedAt, ...meta })
+    } else if (l.aiUrgency === 'red' && l.keptUrgency && l.keptUrgency !== 'red') {
+      items.push({ id: l.id, kind: 'disagreement', log: l, timestamp: l.timestamp, ...meta })
+    }
+  }
+  return items.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+}
+
 function randomCode() {
   return String(Math.floor(100000 + Math.random() * 900000))
 }
@@ -41,6 +71,10 @@ export function HouseholdProvider({ children }) {
   const [generalCode, setGeneralCode] = useState(defaultGeneralCode)
   const [activeProfile, setActiveProfile] = useState(null)
   const [accessLog, setAccessLog] = useState([])
+  // Per-entry handled state for the notification center: id -> 'acknowledged'
+  // | 'resolved'. Absent = still "new". In-memory, matching the app's mock
+  // approach — resets on reload, same as the logs themselves.
+  const [notificationState, setNotificationState] = useState({})
   const [secondsUntilTimeout, setSecondsUntilTimeout] = useState(null)
   const expiresAtRef = useRef(null)
 
@@ -220,6 +254,38 @@ export function HouseholdProvider({ children }) {
     }))
   }, [])
 
+  // Notification-center transitions. Each stores { status, note, by, at } so
+  // downstream can show who handled it, when, and how. Acknowledging and
+  // resolving both drop the item from the unread / open counts (which key on
+  // status === 'new'), so a handled 2-day-old item never resurfaces as "open".
+  // Acknowledge marks "in progress" (note optional); resolve closes it out
+  // (note required by the caller's UI).
+  const acknowledgeNotification = useCallback((id, { note, by } = {}) => {
+    setNotificationState((prev) => ({
+      ...prev,
+      [id]: { ...(prev[id] || {}), status: 'acknowledged', note: note ?? null, by, at: new Date().toISOString() },
+    }))
+  }, [])
+
+  const resolveNotification = useCallback((id, { note, by } = {}) => {
+    setNotificationState((prev) => ({
+      ...prev,
+      [id]: { ...(prev[id] || {}), status: 'resolved', note, by, at: new Date().toISOString() },
+    }))
+  }, [])
+
+  // Family "seen" — records that a family member reviewed a needs-attention
+  // flag WITHOUT touching the clinical status. Merges onto any existing state
+  // so it never clears an acknowledge/resolve, and (by leaving `status`
+  // untouched) it doesn't drop the item from the open/unread count. Clinical
+  // closure stays nurse-only via acknowledge/resolve.
+  const markSeenByFamily = useCallback((id, { by } = {}) => {
+    setNotificationState((prev) => ({
+      ...prev,
+      [id]: { ...(prev[id] || {}), familySeenBy: by ?? null, familySeenAt: new Date().toISOString() },
+    }))
+  }, [])
+
   // `med` is a carePlan.medications entry; `reason` is the optional
   // free-text note a caregiver adds explaining why it was given, which
   // becomes the Timeline's "Medication Administered" sub-entry.
@@ -254,6 +320,11 @@ export function HouseholdProvider({ children }) {
     })
   }, [addLog, activeProfile])
 
+  // Derived once per render so the bell badge, digest count, and inbox all
+  // read one source of truth. Only "new" items count as open/unread.
+  const notifications = buildNotifications(logs, notificationState)
+  const unreadNotificationCount = notifications.filter((n) => n.status === 'new').length
+
   const value = {
     household,
     carePlan,
@@ -263,6 +334,11 @@ export function HouseholdProvider({ children }) {
     addLog,
     updateLog,
     logMedsGiven,
+    notifications,
+    unreadNotificationCount,
+    acknowledgeNotification,
+    resolveNotification,
+    markSeenByFamily,
     status,
     location,
     setPatientStatus,

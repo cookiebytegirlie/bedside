@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { visitDigest } from '../mockData'
 import { fetchVisitDigest } from '../lib/api'
 import { canSeeMeds } from '../utils/roles'
-import { CheckIcon, XIcon, BellIcon, TrendUpIcon, TrendDownIcon, MoonIcon, RefreshIcon } from './icons'
+import { useHousehold } from '../state/HouseholdContext'
+import { CheckIcon, XIcon, BellIcon, TrendUpIcon, TrendDownIcon, MoonIcon, RefreshIcon, ChevronRightIcon } from './icons'
 
 const CHANGE_ICON = { 'trend-down': TrendDownIcon, 'trend-up': TrendUpIcon, moon: MoonIcon }
 
@@ -40,7 +41,8 @@ function SkeletonBlock({ lines = 2 }) {
 // The content is generated live: on open (and on every refresh tap) we call
 // the get-trends agent, which reads the actual log table. `visitDigest` from
 // mockData is only a fallback if that call fails.
-export default function VisitDigestModal({ open, onClose, role, onReview }) {
+export default function VisitDigestModal({ open, onClose, role, onOpenInbox }) {
+  const { unreadNotificationCount } = useHousehold()
   const [digest, setDigest] = useState(visitDigest)
   const [loading, setLoading] = useState(false)
 
@@ -116,21 +118,26 @@ export default function VisitDigestModal({ open, onClose, role, onReview }) {
           </div>
         ) : (
         <div className="space-y-4">
-          {seeMeds && (
-            <div className="rounded-card border border-attention-fg/30 bg-white p-4">
-              <div className="mb-1.5 flex items-center gap-2 text-attention-fg">
-                <BellIcon width={17} height={17} strokeWidth={2} />
-                <p className="text-[15px] font-bold">Needs you · {digest.needsYou.count}</p>
-              </div>
-              <p className="text-[13px] font-medium leading-snug text-ink/80">{digest.needsYou.text}</p>
-              <button
-                type="button"
-                onClick={onReview}
-                className="mt-3 w-full rounded-card border border-attention-fg/30 bg-attention-bg py-2.5 text-[14px] font-bold text-ink active:scale-[0.99]"
-              >
-                {digest.needsYou.cta}
-              </button>
-            </div>
+          {/* Actionable items live in the notification center now — the digest
+              just shows a glanceable count that links out. Only genuinely-open
+              (unacknowledged / unresolved) items are counted. */}
+          {seeMeds && unreadNotificationCount > 0 && (
+            <button
+              type="button"
+              onClick={onOpenInbox}
+              className="flex w-full items-center gap-2.5 rounded-card border border-attention-fg/30 bg-white p-3.5 text-left active:scale-[0.99]"
+            >
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-attention-tint text-attention-fg">
+                <BellIcon width={16} height={16} strokeWidth={2} />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[14px] font-semibold tracking-tight text-ink">
+                  {unreadNotificationCount} item{unreadNotificationCount === 1 ? '' : 's'} need your attention
+                </span>
+                <span className="block text-[12px] font-medium text-muted">Escalations and review flags · open inbox</span>
+              </span>
+              <ChevronRightIcon width={16} height={16} strokeWidth={2.5} className="shrink-0 text-attention-fg" />
+            </button>
           )}
 
           {seeMeds && (

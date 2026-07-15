@@ -7,10 +7,14 @@ import OnDutyHeader from '../components/OnDutyHeader'
 import UrgencyPicker from '../components/UrgencyPicker'
 import AiResultCard from '../components/AiResultCard'
 import EscalationFlow from '../components/EscalationFlow'
-import { MicIcon, PillIcon, RefreshIcon, CheckIcon, SparklesIcon } from '../components/icons'
+import { MicIcon, PillIcon, RefreshIcon, CheckIcon, SparklesIcon, AlertTriangleIcon, PhoneIcon } from '../components/icons'
 
 const ACTIVITY_OPTIONS = ['Sleeping', 'Relaxing', 'Eating', 'Activity']
 const LOCATION_OPTIONS = ['Living Room', 'Bedroom', 'Garden', 'Kitchen']
+
+// Keep a write-in status short so the Timeline's "Currently: {status} in
+// {location}" line stays on one row.
+const CUSTOM_STATUS_MAX = 40
 
 // Plain-language name for each urgency flag, matching UrgencyPicker's labels.
 const URGENCY_LABEL = { green: 'Routine', yellow: 'Keep an eye on', red: 'Needs attention' }
@@ -64,17 +68,52 @@ function useSpeechRecognition(onResult) {
 
 // Single-select as an iOS inset grouped list: white rows, hairline separators
 // inset from the label, a trailing check on the selected row, which also
-// takes the soft gray fill.
+// takes the soft gray fill. The final "Other…" row is a write-in: selecting it
+// reveals an inline text field (same styling as the meds "Note" input) whose
+// value becomes the status. Because a custom value matches no preset, the row
+// tracks "custom or explicitly opened" state locally rather than value === opt.
 function ActivityList({ options, value, onPick }) {
+  // A non-empty status that isn't one of the presets is a write-in value.
+  const isCustom = Boolean(value) && !options.includes(value)
+  const [otherOpen, setOtherOpen] = useState(isCustom)
+  const [customText, setCustomText] = useState(isCustom ? value : '')
+  const inputRef = useRef(null)
+  const otherActive = otherOpen || isCustom
+
+  const pickPreset = (opt) => {
+    // Picking a preset clears the write-in and collapses its input.
+    setOtherOpen(false)
+    setCustomText('')
+    onPick(opt)
+  }
+
+  const openOther = () => {
+    setOtherOpen(true)
+    if (isCustom) setCustomText(value)
+    // Focus only on an explicit tap (never on a mount that's pre-revealed
+    // because the current status is already custom).
+    requestAnimationFrame(() => inputRef.current?.focus())
+  }
+
+  const changeCustom = (raw) => {
+    const text = raw.slice(0, CUSTOM_STATUS_MAX)
+    setCustomText(text)
+    // Commit the write-in as the live status, the same way a preset tap does.
+    // Skip empty so a mid-edit clear doesn't blank out the status chip.
+    if (text.trim()) onPick(text)
+  }
+
   return (
     <div className="overflow-hidden rounded-card border border-line bg-white">
       {options.map((opt, i) => {
-        const active = value === opt
+        // A preset reads selected only when it matches and the write-in isn't
+        // the active choice.
+        const active = value === opt && !otherActive
         return (
           <button
             key={opt}
             type="button"
-            onClick={() => onPick(opt)}
+            onClick={() => pickPreset(opt)}
             className={`relative flex min-h-[48px] w-full items-center justify-between px-4 py-3 text-left transition-colors active:bg-track ${
               active ? 'bg-track' : 'bg-white'
             }`}
@@ -87,6 +126,36 @@ function ActivityList({ options, value, onPick }) {
           </button>
         )
       })}
+
+      {/* Write-in "Other…" row */}
+      <button
+        type="button"
+        onClick={openOther}
+        className={`relative flex min-h-[48px] w-full items-center justify-between px-4 py-3 text-left transition-colors active:bg-track ${
+          otherActive ? 'bg-track' : 'bg-white'
+        }`}
+      >
+        <span className="absolute left-4 right-0 top-0 h-px bg-line" />
+        <span className={`text-[15px] tracking-tight ${otherActive ? 'font-semibold text-ink' : 'font-medium text-ink'}`}>
+          Other…
+        </span>
+        {otherActive && <CheckIcon width={18} height={18} strokeWidth={2.5} className="shrink-0 text-ink" />}
+      </button>
+
+      {/* Inline write-in field — mirrors the meds "Note" input styling. */}
+      {otherActive && (
+        <div className="relative flex items-center gap-2.5 bg-track px-4 py-3">
+          <span className="absolute left-4 right-0 top-0 h-px bg-line" />
+          <input
+            ref={inputRef}
+            value={customText}
+            onChange={(e) => changeCustom(e.target.value)}
+            maxLength={CUSTOM_STATUS_MAX}
+            placeholder="Type a custom status…"
+            className="min-w-0 flex-1 bg-transparent text-[14px] font-medium text-ink placeholder:text-faint focus:outline-none"
+          />
+        </div>
+      )}
     </div>
   )
 }
@@ -216,7 +285,7 @@ function MedsSection({ sessionId, urgency }) {
   )
 }
 
-function NotesSection({ sessionId, flag, setFlag, escalated }) {
+function NotesSection({ sessionId, flag, setFlag }) {
   const { addLog, activeProfile, contacts } = useHousehold()
   const seeMeds = canSeeMeds(activeProfile?.role)
   const isVolunteerAide = /volunteer|aide/i.test(activeProfile?.role || '')
@@ -247,6 +316,19 @@ function NotesSection({ sessionId, flag, setFlag, escalated }) {
     // The urgency saved is the caregiver's own flag — the AI's read is only a
     // suggestion they can accept (which updates the flag) or ignore.
     await saveLogEntry({ transcript, response: result, author: activeProfile?.name, urgency: flag })
+    // Saving a "Needs attention" entry is what actually pages the on-call
+    // nurse — so the page carries the real note, not a placeholder. Stamp the
+    // escalation onto the entry so the Timeline can show the "nurse notified
+    // automatically" line, and render the paging confirmation below (see the
+    // 'saved' stage) instead of firing it back when the flag was picked.
+    // Escalation follows the flag the caregiver KEPT — never the AI's read.
+    const escalating = flag === 'red'
+    // Advisory-only safety net: the AI never escalates or pages on its own.
+    // But when it inferred "red" and the caregiver saved the entry LOWER, we
+    // record the disagreement on the entry so the nurse and primary caregiver
+    // get a passive heads-up (Timeline badge + visit digest) — awareness, not
+    // an alarm, and distinct from a real, human-kept red escalation.
+    const aiFlaggedForReview = result.urgency === 'red' && flag !== 'red'
     addLog({
       author: activeProfile?.name ?? 'You',
       type: isVolunteerAide ? 'skin-integrity' : 'shift-note',
@@ -259,14 +341,21 @@ function NotesSection({ sessionId, flag, setFlag, escalated }) {
         seeMeds && result.medications[0]
           ? { name: result.medications[0].name, time: result.medications[0].time, dose: '', route: '', reason: '' }
           : undefined,
-      // Stamp the escalation onto the entry so the Timeline can show the
-      // "nurse notified automatically" line for this moment.
-      ...(escalated
+      ...(escalating
         ? { escalatedAt: new Date().toISOString(), escalatedTo: contacts.hospiceTeam[0].name }
+        : {}),
+      ...(aiFlaggedForReview
+        ? {
+            aiUrgency: 'red',
+            keptUrgency: flag,
+            aiUrgencyReason: result.urgency_reason || result.reasoning || '',
+          }
         : {}),
     })
     setStage('saved')
-    setTimeout(reset, 1500)
+    // Red entries hold on the escalation confirmation; everything else flashes
+    // "Saved" briefly and resets for the next entry.
+    if (!escalating) setTimeout(reset, 1500)
   }
 
   return (
@@ -389,12 +478,79 @@ function NotesSection({ sessionId, flag, setFlag, escalated }) {
       )}
 
       {stage === 'saved' && (
-        <div className="flex items-center gap-2 rounded-card bg-track p-4 text-ink">
-          <CheckIcon width={18} height={18} strokeWidth={3} className="shrink-0" />
-          <p className="text-[15px] font-semibold">Saved to the timeline</p>
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 rounded-card bg-track p-4 text-ink">
+            <CheckIcon width={18} height={18} strokeWidth={3} className="shrink-0" />
+            <p className="text-[15px] font-semibold">Saved to the timeline</p>
+          </div>
+          {/* Only now — on save — does the simulated page fire, carrying the
+              entry's real summary rather than a placeholder. */}
+          {flag === 'red' && result && (
+            <EscalationFlow
+              trigger={{
+                quote: result.summary,
+                reasonLine:
+                  'You saved this as “Needs attention,” so the on-call nurse is being paged with your note.',
+              }}
+            />
+          )}
         </div>
       )}
     </section>
+  )
+}
+
+function telHref(phone) {
+  return `tel:${phone.replace(/[^\d+]/g, '')}`
+}
+
+// Always-visible safety notice for a "Needs attention" entry, shown the
+// instant the red flag is picked. It is passive — it does NOT page anyone;
+// the on-call nurse is notified when the entry is saved (see NotesSection.save
+// and the passive line rendered beside this). Its whole job is to make clear
+// that notifying the nurse is not the same as immediate help, and to put the
+// hospice-correct first call one tap away — the on-call nurse line, not 911,
+// because most patients here are on a comfort-care/DNR plan that a 911 response
+// can override with resuscitation and transport they specifically chose to
+// forgo. 911 stays present but secondary, framed as the care plan's own
+// emergency guidance rather than a blanket instruction.
+//
+// Legibility: this is a white card so multi-line body copy sits in high-
+// contrast text-ink, never red-on-red. The attention red is used only as an
+// accent — the warning icon and a thin border — per the monochrome system.
+function EmergencyNotice({ patientName, nurse }) {
+  return (
+    <div className="rounded-card border border-attention-fg/30 bg-white p-4">
+      <div className="flex items-start gap-2.5">
+        <AlertTriangleIcon width={18} height={18} strokeWidth={2.2} className="mt-0.5 shrink-0 text-attention-fg" />
+        <div className="min-w-0">
+          <p className="text-[14px] font-semibold text-ink">In an emergency, don’t wait on Bedside</p>
+          <p className="mt-1 text-[13px] font-medium leading-snug text-ink/80">
+            Notifying the nurse isn’t the same as immediate help, and it isn’t instant. If {patientName} needs urgent
+            attention, call now — don’t wait on a saved entry.
+          </p>
+        </div>
+      </div>
+
+      <a
+        href={telHref(nurse.phone)}
+        className="mt-3 flex w-full items-center justify-center gap-2 rounded-full bg-ink py-3 text-[15px] font-semibold text-white active:scale-[0.98]"
+      >
+        <PhoneIcon width={18} height={18} strokeWidth={2} />
+        Call the on-call nurse line now
+      </a>
+      <p className="mt-1.5 text-center text-[12px] font-medium text-muted">
+        {nurse.name} · {nurse.phone}
+      </p>
+
+      <p className="mt-3 border-t border-line pt-3 text-[12px] font-medium leading-snug text-muted">
+        <a href="tel:911" className="font-semibold text-ink underline underline-offset-2">
+          Call 911
+        </a>{' '}
+        only per the care plan’s emergency guidance. For a patient on a comfort-care plan, a 911 response can trigger
+        resuscitation and transport they chose to forgo — so the nurse line comes first.
+      </p>
+    </div>
   )
 }
 
@@ -403,16 +559,8 @@ export default function LogShift() {
   // so the Timeline can group it into a single card instead of one per tap.
   const sessionIdRef = useRef(`session-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
   const [flag, setFlag] = useState('green')
-  // Set once the on-call nurse has been notified for this entry (only while the
-  // flag is "Needs attention"); stamped onto the saved note so the Timeline can
-  // show the "nurse notified automatically" line.
-  const [escalated, setEscalated] = useState(false)
-  const { activeProfile } = useHousehold()
+  const { activeProfile, contacts, household } = useHousehold()
 
-  // Dropping the flag below "Needs attention" clears any prior escalation state.
-  useEffect(() => {
-    if (flag !== 'red') setEscalated(false)
-  }, [flag])
   // Volunteers/aides are a merged, non-medical role tier — administering or
   // even checking off medication is out of scope for them, same as it would
   // be for a home health aide in a real hospice household.
@@ -429,28 +577,22 @@ export default function LogShift() {
           <UrgencyPicker value={flag} onChange={setFlag} />
         </section>
 
-        {/* The flag is the single source of urgency for the whole entry, so a
-            "Needs attention" flag escalates once here — whether it's a
-            status/meds-only entry or one with a dictated note (the note's AI
-            read only *suggests* a flag change; escalation follows the flag the
-            caregiver actually keeps). The status/meds taps below carry the same
-            flag onto their Timeline entries. */}
+        {/* Picking "Needs attention" only surfaces the emergency notice and a
+            passive heads-up — it does NOT page anyone. The on-call nurse is
+            notified when the entry is actually saved (NotesSection.save), so
+            the page carries the real note instead of a placeholder. */}
         {flag === 'red' && (
-          <div className="mt-4">
-            <EscalationFlow
-              trigger={{
-                quote: "I'm flagging this as needs attention.",
-                reasonLine:
-                  'You marked this entry “Needs attention,” so the on-call nurse is being looped in automatically.',
-              }}
-              onNotified={() => setEscalated(true)}
-            />
+          <div className="mt-4 space-y-2">
+            <EmergencyNotice patientName={household.preferredName} nurse={contacts.hospiceTeam[0]} />
+            <p className="text-center text-[12px] font-medium text-muted">
+              The on-call nurse will be notified when you save this entry.
+            </p>
           </div>
         )}
 
         <StatusSection sessionId={sessionIdRef.current} urgency={flag} />
         {canGiveMeds && <MedsSection sessionId={sessionIdRef.current} urgency={flag} />}
-        <NotesSection sessionId={sessionIdRef.current} flag={flag} setFlag={setFlag} escalated={escalated} />
+        <NotesSection sessionId={sessionIdRef.current} flag={flag} setFlag={setFlag} />
       </main>
     </>
   )
