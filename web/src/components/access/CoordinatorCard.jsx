@@ -10,7 +10,7 @@ export default function CoordinatorCard({ coordinator }) {
   return (
     <section>
       <h2 className="mb-2 text-xl font-bold text-ink">Coordinator</h2>
-      <div className="rounded-2xl bg-white p-4 shadow-card">
+      <div className="rounded-card border border-line bg-white p-4">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
             <p className="truncate text-base font-bold text-ink">{coordinator.name}</p>

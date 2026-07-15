@@ -18,7 +18,7 @@ function ScheduleEditor({ title, description, startHour, endHour, onSave }) {
   }
 
   return (
-    <div className="rounded-4xl bg-white p-5 shadow-card">
+    <div className="rounded-card border border-line bg-white p-5">
       <p className="text-base font-bold text-ink">{title}</p>
       <p className="mt-0.5 text-sm font-medium text-muted">{description}</p>
 
@@ -67,7 +67,7 @@ function NotAllowed() {
           <p className="mt-1 text-sm font-semibold text-muted">Primary caregivers only</p>
         </div>
 
-        <div className="rounded-4xl bg-clay-50 p-5 text-base font-medium text-ink/70 shadow-card">
+        <div className="rounded-card border border-line bg-clay-50 p-5 text-base font-medium text-ink/70">
           Only primary caregivers can manage volunteer shift access. Ask Daniel to make changes here.
         </div>
       </main>
@@ -121,7 +121,7 @@ export default function VolunteerAccess() {
             onSave={updateGeneralSlot}
           />
 
-          <div className="mt-2.5 rounded-4xl bg-white p-5 shadow-card">
+          <div className="mt-2.5 rounded-card border border-line bg-white p-5">
             <p className="text-base font-bold text-ink">Current one-time code</p>
             <p className="mt-0.5 text-sm font-medium text-muted">Share this with whoever's covering — it won't work outside the window above.</p>
             <p className="mt-3 text-center text-3xl font-bold tracking-[0.3em] text-mist">{generalCode}</p>

@@ -150,7 +150,7 @@ export default function ShiftEnd() {
   return (
     <>
       <OnDutyHeader />
-      <main className="bg-household flex-1 px-5 pb-8 pt-6">
+      <main className="bg-white flex-1 px-5 pb-8 pt-6">
         <button
           type="button"
           onClick={() => navigate(`/household/${householdId}`)}
