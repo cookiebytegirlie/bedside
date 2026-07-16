@@ -4,6 +4,7 @@ import HouseholdLayout from './screens/HouseholdLayout'
 import Timeline from './screens/Timeline'
 import MeetEllie from './screens/MeetEllie'
 import ShiftEnd from './screens/ShiftEnd'
+import LogHome from './screens/LogHome'
 import LogShift from './screens/LogShift'
 import CarePlanQA from './screens/CarePlanQA'
 import Settings from './screens/Settings'
@@ -24,7 +25,8 @@ export default function App() {
         <Route index element={<Timeline />} />
         <Route path="about" element={<MeetEllie />} />
         <Route path="end-shift" element={<ShiftEnd />} />
-        <Route path="log" element={<LogShift />} />
+        <Route path="log" element={<LogHome />} />
+        <Route path="log/note" element={<LogShift />} />
         <Route path="ask" element={<CarePlanQA />} />
         <Route path="info" element={<EssentialInfo />} />
         <Route path="inbox" element={<Notifications />} />

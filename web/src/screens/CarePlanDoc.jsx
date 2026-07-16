@@ -1,7 +1,8 @@
 import { Link, useParams } from 'react-router-dom'
 import { carePlanDocument } from '../mockData'
+import { useHousehold } from '../state/HouseholdContext'
 import OnDutyHeader from '../components/OnDutyHeader'
-import { ArrowLeftIcon } from '../components/icons'
+import { ArrowLeftIcon, FileTextIcon, ChevronRightIcon } from '../components/icons'
 
 // Matches the "Last updated" line on CarePlanLink so the viewer header and
 // the entry-point card read the same.
@@ -21,6 +22,12 @@ function formatLastUpdated(iso) {
 // caregiver.
 export default function CarePlanDoc() {
   const { householdId } = useParams()
+  const { activeProfile } = useHousehold()
+  // Updating the care plan is a documented clinical action — nurses and family
+  // only, matching the gate on the target screen (ClinicalRequest) and the
+  // "Update care plan" row in Settings. Hidden entirely for other roles so the
+  // shortcut never leads to a "not available" dead-end.
+  const canUpdate = /nurse|family/i.test(activeProfile?.role || '')
 
   return (
     <>
@@ -40,6 +47,22 @@ export default function CarePlanDoc() {
             Last updated {formatLastUpdated(carePlanDocument.lastUpdated)}
           </p>
         </div>
+
+        {canUpdate && (
+          <Link
+            to={`/household/${householdId}/settings/action/care-plan`}
+            className="mb-4 flex items-center gap-3 rounded-card border border-line bg-white p-4 active:scale-[0.98]"
+          >
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-track text-icon">
+              <FileTextIcon width={18} height={18} strokeWidth={2} />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[15px] font-semibold tracking-tight text-ink">Update care plan</span>
+              <span className="block text-[13px] font-medium text-muted">Shared with the care team</span>
+            </span>
+            <ChevronRightIcon width={17} height={17} strokeWidth={2.5} className="shrink-0 text-faint" />
+          </Link>
+        )}
 
         <iframe
           src={carePlanDocument.url}

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { Link, useParams } from 'react-router-dom'
 import { useHousehold } from '../state/HouseholdContext'
 import { summarizeShiftNote } from '../lib/api'
 import { saveLogEntry } from '../lib/db'
@@ -7,7 +8,7 @@ import OnDutyHeader from '../components/OnDutyHeader'
 import UrgencyPicker from '../components/UrgencyPicker'
 import AiResultCard from '../components/AiResultCard'
 import EscalationFlow from '../components/EscalationFlow'
-import { MicIcon, PillIcon, RefreshIcon, CheckIcon, SparklesIcon, AlertTriangleIcon, PhoneIcon } from '../components/icons'
+import { MicIcon, PillIcon, RefreshIcon, CheckIcon, SparklesIcon, AlertTriangleIcon, PhoneIcon, ArrowLeftIcon } from '../components/icons'
 
 const ACTIVITY_OPTIONS = ['Sleeping', 'Relaxing', 'Eating', 'Activity']
 const LOCATION_OPTIONS = ['Living Room', 'Bedroom', 'Garden', 'Kitchen']
@@ -559,6 +560,7 @@ export default function LogShift() {
   // so the Timeline can group it into a single card instead of one per tap.
   const sessionIdRef = useRef(`session-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
   const [flag, setFlag] = useState('green')
+  const { householdId } = useParams()
   const { activeProfile, contacts, household } = useHousehold()
 
   // Volunteers/aides are a merged, non-medical role tier — administering or
@@ -570,7 +572,14 @@ export default function LogShift() {
     <>
       <OnDutyHeader />
       <main className="flex-1 bg-white px-4 pb-10 pt-6">
-        <h1 className="mb-6 text-[30px] font-bold leading-tight tracking-tighter text-ink">Log new entry</h1>
+        <Link
+          to={`/household/${householdId}/log`}
+          aria-label="Back to Log"
+          className="mb-3 -ml-1 flex h-9 w-9 items-center justify-center text-muted active:scale-[0.94]"
+        >
+          <ArrowLeftIcon width={22} height={22} strokeWidth={2} />
+        </Link>
+        <h1 className="mb-6 text-[30px] font-bold leading-tight tracking-tighter text-ink">New Note Entry</h1>
 
         <section>
           <GroupLabel>Flag this entry</GroupLabel>
