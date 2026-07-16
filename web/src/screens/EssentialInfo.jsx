@@ -431,7 +431,7 @@ export default function EssentialInfo() {
         </Section>
 
         <Section id="hospice-team" title="Hospice team">
-          <div className="space-y-2.5 lg:grid lg:grid-cols-2 lg:gap-2.5 lg:space-y-0">
+          <div className="space-y-2.5">
             {contacts.hospiceTeam.map((c) => (
               <ContactCard key={c.name} contact={c} />
             ))}
@@ -439,7 +439,7 @@ export default function EssentialInfo() {
         </Section>
 
         <Section id="family" title="Family">
-          <div className="space-y-2.5 lg:grid lg:grid-cols-2 lg:gap-2.5 lg:space-y-0">
+          <div className="space-y-2.5">
             {contacts.family.map((c) => (
               <ContactCard key={c.name} contact={c} />
             ))}

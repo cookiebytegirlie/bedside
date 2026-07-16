@@ -14,7 +14,7 @@ export default function BottomNav() {
   const base = `/household/${householdId}`
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-20 border-t border-line bg-white/90 backdrop-blur pb-[env(safe-area-inset-bottom)] lg:hidden">
+    <nav className="fixed bottom-0 left-0 right-0 z-20 border-t border-line bg-white/90 backdrop-blur pb-[env(safe-area-inset-bottom)]">
       <div className="mx-auto flex max-w-md">
         {TABS.map(({ to, label, icon: Icon, end }) => (
           <NavLink
