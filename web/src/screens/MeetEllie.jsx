@@ -197,7 +197,7 @@ export default function MeetEllie() {
   return (
     <>
       <OnDutyHeader />
-      <main className="bg-household flex-1 px-5 pb-8 pt-6">
+      <main className="bg-white flex-1 px-5 pb-8 pt-6">
         <Link
           to={`/household/${householdId}`}
           aria-label="Back to timeline"

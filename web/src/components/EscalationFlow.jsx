@@ -58,11 +58,11 @@ export default function EscalationFlow({ trigger, onNotified }) {
   if (stage === 'firing') {
     return (
       <div className="space-y-2">
-        <div className="rounded-[8px] bg-white p-4 shadow-card">
+        <div className="rounded-card border border-line bg-white p-4">
           <p className="text-[11px] font-bold uppercase tracking-wide text-muted">What you said</p>
           <p className="mt-1 text-[13px] font-medium italic leading-snug text-ink/80">“{trigger.quote}”</p>
 
-          <div className="mt-3 rounded-[8px] bg-attention-bg p-3 text-attention-fg">
+          <div className="mt-3 rounded-card bg-attention-bg p-3 text-attention-fg">
             <div className="flex items-start gap-2">
               <AlertTriangleIcon width={16} height={16} strokeWidth={2.5} className="mt-0.5 shrink-0" />
               <div className="min-w-0">
@@ -84,8 +84,8 @@ export default function EscalationFlow({ trigger, onNotified }) {
   // notified
   return (
     <div className="space-y-2">
-      <div className="rounded-[8px] bg-white p-4 shadow-card">
-        <div className="flex items-start gap-2 rounded-[8px] bg-routine-bg p-3 text-routine-fg">
+      <div className="rounded-card border border-line bg-white p-4">
+        <div className="flex items-start gap-2 rounded-card bg-routine-bg p-3 text-routine-fg">
           <CheckIcon width={16} height={16} strokeWidth={3} className="mt-0.5 shrink-0" />
           <div className="min-w-0">
             <p className="text-[14px] font-bold leading-tight">{nurse.name} has been notified</p>
@@ -93,7 +93,7 @@ export default function EscalationFlow({ trigger, onNotified }) {
           </div>
         </div>
 
-        <div className="mt-3 rounded-[8px] border border-sage-200 bg-white p-3">
+        <div className="mt-3 rounded-card border border-line bg-white p-3">
           <p className="text-[11px] font-bold uppercase tracking-wide text-muted">What was sent</p>
           <p className="mt-1 text-[13px] font-medium leading-snug text-ink">“{condense(trigger.quote)}”</p>
         </div>
@@ -103,7 +103,7 @@ export default function EscalationFlow({ trigger, onNotified }) {
             <p className="text-[11px] font-bold uppercase tracking-wide text-muted">While you wait</p>
             <div className="mt-1.5 flex items-center justify-between gap-2">
               <p className="min-w-0 text-[14px] font-semibold text-ink">{comfort}</p>
-              <span className="shrink-0 rounded-full bg-[#e4edf6] px-2 py-0.5 text-[10px] font-bold text-[#3a6ea5]">
+              <span className="shrink-0 rounded-full bg-track px-2 py-0.5 text-[10px] font-semibold text-muted">
                 From {household.preferredName}'s care plan
               </span>
             </div>
@@ -112,7 +112,7 @@ export default function EscalationFlow({ trigger, onNotified }) {
 
         <a
           href={telHref(nurse.phone)}
-          className="mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-mist py-3 text-base font-bold text-white active:scale-[0.98]"
+          className="mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-ink py-3 text-[15px] font-semibold text-white active:scale-[0.98]"
         >
           <PhoneIcon width={18} height={18} strokeWidth={2} />
           Call the nurse line now

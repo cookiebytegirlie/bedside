@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { visitDigest } from '../mockData'
 import { fetchVisitDigest, refreshVisitDigest } from '../lib/api'
 import { canSeeMeds } from '../utils/roles'
-import { CheckIcon, XIcon, BellIcon, TrendUpIcon, TrendDownIcon, MoonIcon, RefreshIcon } from './icons'
+import { useHousehold } from '../state/HouseholdContext'
+import { CheckIcon, XIcon, BellIcon, TrendUpIcon, TrendDownIcon, MoonIcon, RefreshIcon, ChevronRightIcon } from './icons'
 
 const CHANGE_ICON = { 'trend-down': TrendDownIcon, 'trend-up': TrendUpIcon, moon: MoonIcon }
 
@@ -22,7 +23,7 @@ function WorkingRow({ status, label }) {
 // reads as "computing" rather than "stuck".
 function SkeletonBlock({ lines = 2 }) {
   return (
-    <div className="space-y-3 rounded-[8px] bg-white p-4 shadow-card">
+    <div className="space-y-3 rounded-card border border-line bg-white p-4">
       {Array.from({ length: lines }).map((_, i) => (
         <div key={i} className="space-y-2">
           <div className="h-3.5 w-1/3 animate-pulse rounded bg-ink/10" />
@@ -47,7 +48,8 @@ function SkeletonBlock({ lines = 2 }) {
 // leave the user staring at nothing for a full minute of demo time.
 const UI_CAP_MS = 5000
 
-export default function VisitDigestModal({ open, onClose, role, onReview }) {
+export default function VisitDigestModal({ open, onClose, role, onOpenInbox }) {
+  const { unreadNotificationCount } = useHousehold()
   const [digest, setDigest] = useState(visitDigest)
   const [loading, setLoading] = useState(false)
 
@@ -96,16 +98,16 @@ export default function VisitDigestModal({ open, onClose, role, onReview }) {
       onClick={onClose}
     >
       <div
-        className="max-h-[88vh] w-full max-w-md overflow-y-auto rounded-t-[8px] bg-household p-5 shadow-card sm:rounded-[8px]"
+        className="max-h-[88vh] w-full max-w-md overflow-y-auto rounded-t-card border border-line bg-white p-5 shadow-soft sm:rounded-card"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex items-start justify-between gap-3">
           <div className="min-w-0">
             <h2 className="text-xl font-bold text-ink">Since your last visit</h2>
             <p className="text-[12px] font-semibold text-muted">{digest.lastVisit}</p>
-            <p className="mt-0.5 flex items-center gap-1.5 text-[11px] font-medium text-mist">
+            <p className="mt-0.5 flex items-center gap-1.5 text-[11px] font-medium text-muted">
               {stillFetching && (
-                <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-watch-fg" aria-hidden />
+                <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-ink" aria-hidden />
               )}
               {attribution}
             </p>
@@ -140,25 +142,30 @@ export default function VisitDigestModal({ open, onClose, role, onReview }) {
           </div>
         ) : (
         <div className="space-y-4">
-          {seeMeds && (
-            <div className="rounded-[8px] border border-attention-fg/30 bg-white p-4">
-              <div className="mb-1.5 flex items-center gap-2 text-attention-fg">
-                <BellIcon width={17} height={17} strokeWidth={2} />
-                <p className="text-[15px] font-bold">Needs you · {digest.needsYou.count}</p>
-              </div>
-              <p className="text-[13px] font-medium leading-snug text-ink/80">{digest.needsYou.text}</p>
-              <button
-                type="button"
-                onClick={onReview}
-                className="mt-3 w-full rounded-[8px] border border-attention-fg/30 bg-attention-bg py-2.5 text-[14px] font-bold text-ink active:scale-[0.99]"
-              >
-                {digest.needsYou.cta}
-              </button>
-            </div>
+          {/* Actionable items live in the notification center now — the digest
+              just shows a glanceable count that links out. Only genuinely-open
+              (unacknowledged / unresolved) items are counted. */}
+          {seeMeds && unreadNotificationCount > 0 && (
+            <button
+              type="button"
+              onClick={onOpenInbox}
+              className="flex w-full items-center gap-2.5 rounded-card border border-attention-fg/30 bg-white p-3.5 text-left active:scale-[0.99]"
+            >
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-attention-tint text-attention-fg">
+                <BellIcon width={16} height={16} strokeWidth={2} />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[14px] font-semibold tracking-tight text-ink">
+                  {unreadNotificationCount} item{unreadNotificationCount === 1 ? '' : 's'} need your attention
+                </span>
+                <span className="block text-[12px] font-medium text-muted">Escalations and review flags · open inbox</span>
+              </span>
+              <ChevronRightIcon width={16} height={16} strokeWidth={2.5} className="shrink-0 text-attention-fg" />
+            </button>
           )}
 
           {seeMeds && (
-            <div className="rounded-[8px] border border-watch-fg/30 bg-white p-4">
+            <div className="rounded-card border border-watch-fg/30 bg-white p-4">
               <div className="mb-1.5 flex items-center gap-2 text-watch-fg">
                 <TrendUpIcon width={17} height={17} strokeWidth={2} />
                 <p className="text-[15px] font-bold">Bedside noticed a pattern</p>
@@ -169,12 +176,12 @@ export default function VisitDigestModal({ open, onClose, role, onReview }) {
 
           <section>
             <h3 className="mb-2 text-[15px] font-bold text-ink">What’s changed</h3>
-            <div className="space-y-3 rounded-[8px] bg-white p-4 shadow-card">
+            <div className="space-y-3 rounded-card border border-line bg-white p-4">
               {digest.changed.map((c) => {
                 const Icon = CHANGE_ICON[c.icon] || TrendDownIcon
                 return (
                   <div key={c.title} className="flex gap-3">
-                    <Icon width={17} height={17} strokeWidth={2} className="mt-0.5 shrink-0 text-mist" />
+                    <Icon width={17} height={17} strokeWidth={2} className="mt-0.5 shrink-0 text-icon" />
                     <div className="min-w-0">
                       <p className="text-[14px] font-bold text-ink">{c.title}</p>
                       <p className="text-[13px] font-medium leading-snug text-ink/70">{c.detail}</p>
@@ -187,7 +194,7 @@ export default function VisitDigestModal({ open, onClose, role, onReview }) {
 
           <section>
             <h3 className="mb-2 text-[15px] font-bold text-ink">What’s working</h3>
-            <div className="space-y-2.5 rounded-[8px] bg-white p-4 shadow-card">
+            <div className="space-y-2.5 rounded-card border border-line bg-white p-4">
               {working.map((w) => (
                 <WorkingRow key={w.label} status={w.status} label={w.label} />
               ))}

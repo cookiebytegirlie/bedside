@@ -70,17 +70,15 @@ export default function CarePlanQA() {
   return (
     <>
       <OnDutyHeader />
-      <main className="flex flex-1 flex-col px-5 py-5">
-        <div className="mb-5 text-center">
-          <h1 className="text-2xl font-bold text-ink">Ask about the care plan</h1>
-          <p className="mt-1 text-sm font-semibold text-muted">Answers pulled from the household's care-plan doc</p>
-        </div>
+      <main className="flex flex-1 flex-col bg-white px-4 py-6">
+        <h1 className="text-[30px] font-bold leading-tight tracking-tighter text-ink">Ask about the care plan</h1>
+        <p className="mt-1 text-[14px] font-medium text-muted">Answers pulled from the household's care-plan doc.</p>
 
         {thread.length === 0 && (
-          <div className="mb-5 rounded-4xl bg-white p-5 shadow-card">
-            <div className="mb-2 flex items-center gap-2 text-mist">
-              <ChatIcon width={19} height={19} strokeWidth={2} />
-              <p className="text-base font-bold">Try asking:</p>
+          <div className="mt-6">
+            <div className="mb-3 flex items-center gap-2 text-muted">
+              <ChatIcon width={18} height={18} strokeWidth={2} />
+              <p className="text-[14px] font-semibold text-ink">Try asking</p>
             </div>
             <div className="flex flex-wrap gap-2">
               {SUGGESTIONS.map((s) => (
@@ -88,7 +86,7 @@ export default function CarePlanQA() {
                   key={s}
                   type="button"
                   onClick={() => submit(s)}
-                  className="rounded-full border border-sage-200 px-3.5 py-2 text-sm font-semibold text-mist"
+                  className="rounded-full border border-line bg-white px-3.5 py-2 text-[13px] font-medium tracking-tight text-ink active:scale-[0.98]"
                 >
                   {s}
                 </button>
@@ -97,7 +95,7 @@ export default function CarePlanQA() {
           </div>
         )}
 
-        <div className="flex-1 space-y-3">
+        <div className="mt-6 flex-1 space-y-3">
           {thread.map((msg, i) =>
             msg.role === 'escalation' ? (
               <EscalationFlow
@@ -107,10 +105,12 @@ export default function CarePlanQA() {
               />
             ) : (
               <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[85%] ${msg.role === 'user' ? '' : 'w-full'}`}>
+                <div className={`max-w-[86%] ${msg.role === 'user' ? '' : 'w-full'}`}>
                   <div
-                    className={`whitespace-pre-line rounded-4xl px-5 py-3 text-base font-medium shadow-card ${
-                      msg.role === 'user' ? 'bg-mist text-white' : 'bg-white text-ink'
+                    className={`whitespace-pre-line px-4 py-3 text-[15px] font-medium leading-snug ${
+                      msg.role === 'user'
+                        ? 'rounded-[18px] rounded-br-md bg-ink text-white'
+                        : 'rounded-[18px] rounded-bl-md bg-track text-ink'
                     }`}
                   >
                     {msg.text}
@@ -129,7 +129,7 @@ export default function CarePlanQA() {
           )}
           {asking && (
             <div className="flex justify-start">
-              <div className="max-w-[85%] rounded-4xl bg-white px-5 py-3 text-base font-medium text-muted shadow-card">
+              <div className="max-w-[86%] rounded-[18px] rounded-bl-md bg-track px-4 py-3 text-[15px] font-medium text-muted">
                 Checking the care plan…
               </div>
             </div>
@@ -141,18 +141,18 @@ export default function CarePlanQA() {
             e.preventDefault()
             submit()
           }}
-          className="sticky bottom-2 mt-4 flex items-center gap-2 rounded-full bg-white p-2 shadow-card"
+          className="sticky bottom-2 mt-4 flex items-center gap-2 rounded-full border border-line bg-white p-1.5 pl-4"
         >
           <input
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
             placeholder="Ask a question…"
-            className="min-w-0 flex-1 rounded-full bg-transparent px-4 py-2.5 text-base font-medium text-ink placeholder:text-ink/30 focus:outline-none"
+            className="min-w-0 flex-1 bg-transparent py-2 text-[15px] font-medium text-ink placeholder:text-faint focus:outline-none"
           />
           <button
             type="submit"
             disabled={!question.trim() || asking}
-            className="shrink-0 rounded-full bg-mist px-5 py-2.5 text-base font-bold text-white disabled:opacity-40"
+            className="shrink-0 rounded-full bg-ink px-5 py-2.5 text-[14px] font-semibold text-white disabled:opacity-40"
           >
             Ask
           </button>

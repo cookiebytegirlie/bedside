@@ -34,7 +34,7 @@ function HouseholdShell() {
     <>
       {activeProfile && <Sidebar />}
       <RouteAuditLogger />
-      <div className={`bg-household flex min-h-screen flex-col pb-20 lg:pb-10 ${activeProfile ? 'lg:pl-64' : ''}`}>
+      <div className={`flex min-h-screen flex-col bg-white pb-20 lg:pb-10 ${activeProfile ? 'lg:pl-64' : ''}`}>
         <div className="mx-auto flex w-full max-w-md flex-1 flex-col lg:max-w-2xl">
           <Outlet />
         </div>

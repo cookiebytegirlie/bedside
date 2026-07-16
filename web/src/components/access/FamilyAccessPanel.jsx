@@ -46,7 +46,7 @@ function Modal({ title, onClose, children }) {
       onClick={onClose}
     >
       <div
-        className="max-h-[85vh] w-full max-w-md overflow-y-auto bg-white p-5 shadow-card"
+        className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-card border border-line bg-white p-5"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex items-center justify-between">
@@ -63,7 +63,7 @@ function Modal({ title, onClose, children }) {
 
 function VolunteerCard({ volunteer, readOnly, onChangeTier, onRemove, onCancelInvite }) {
   return (
-    <div className="rounded-2xl bg-white p-4 shadow-card">
+    <div className="rounded-card border border-line bg-white p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
           <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-sage-100 text-base font-bold text-mist">
@@ -197,7 +197,7 @@ function ScheduleGrid({ shifts, volunteers, guestFillIns, readOnly, onFillGap })
 
                   if (vol) {
                     return (
-                      <div key={shift.id} className="rounded-xl bg-white p-2 shadow-card">
+                      <div key={shift.id} className="rounded-card border border-line bg-white p-2">
                         <p className="truncate text-xs font-bold text-ink">{vol.name.split(' ')[0]}</p>
                         <p className="text-[10px] font-semibold text-muted">{shiftTimeLabel(shift)}</p>
                       </div>
@@ -321,7 +321,7 @@ function FamilyMembersList({ familyMembers, isOwner, onChangePermission }) {
   return (
     <div className="space-y-2">
       {familyMembers.map((m) => (
-        <div key={m.id} className="flex items-center justify-between gap-2 rounded-2xl bg-white p-3.5 shadow-card">
+        <div key={m.id} className="flex items-center justify-between gap-2 rounded-card border border-line bg-white p-3.5">
           <p className="text-sm font-bold text-ink">{m.name}</p>
           {isOwner && m.permission !== 'owner' ? (
             <select
@@ -344,7 +344,7 @@ function FamilyMembersList({ familyMembers, isOwner, onChangePermission }) {
 function ActivityLogSection({ entries, familyMembers }) {
   const actorName = (id) => familyMembers.find((f) => f.id === id)?.name || 'Someone'
   return (
-    <ul className="space-y-2.5 bg-white p-4 shadow-card">
+    <ul className="space-y-2.5 rounded-card border border-line bg-white p-4">
       {entries.slice(0, 6).map((entry) => (
         <li key={entry.id} className="text-sm">
           <span className="font-semibold text-ink">{entry.description}</span>
@@ -377,7 +377,7 @@ function BackupPoolSection({ pool, readOnly, onAdd, onRemove }) {
   return (
     <div className="space-y-2">
       {pool.map((person) => (
-        <div key={person.id} className="flex items-start justify-between gap-2 rounded-2xl bg-white p-3.5 shadow-card">
+        <div key={person.id} className="flex items-start justify-between gap-2 rounded-card border border-line bg-white p-3.5">
           <div className="min-w-0">
             <p className="text-sm font-bold text-ink">{person.name}</p>
             <p className="text-xs font-semibold text-muted">{person.phone}</p>
@@ -393,7 +393,7 @@ function BackupPoolSection({ pool, readOnly, onAdd, onRemove }) {
 
       {!readOnly &&
         (adding ? (
-          <form onSubmit={submit} className="space-y-2 bg-white p-3.5 shadow-card">
+          <form onSubmit={submit} className="space-y-2 rounded-card border border-line bg-white p-3.5">
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -521,7 +521,7 @@ export default function FamilyAccessPanel({
   return (
     <div className="space-y-6">
       {readOnly && (
-        <InfoPanel className="p-3.5 text-sm font-medium shadow-card">
+        <InfoPanel className="p-3.5 text-sm font-medium border border-line">
           You have view-only access — ask {familyMembers.find((f) => f.permission === 'owner')?.name} to make changes.
         </InfoPanel>
       )}

@@ -11,6 +11,7 @@ import RequestMedChange from './screens/RequestMedChange'
 import ClinicalRequest from './screens/ClinicalRequest'
 import AccessSchedule from './screens/AccessSchedule'
 import EssentialInfo from './screens/EssentialInfo'
+import Notifications from './screens/Notifications'
 import CarePlanDoc from './screens/CarePlanDoc'
 import PrivacySecurity from './screens/PrivacySecurity'
 import VolunteerAccess from './screens/VolunteerAccess'
@@ -26,6 +27,7 @@ export default function App() {
         <Route path="log" element={<LogShift />} />
         <Route path="ask" element={<CarePlanQA />} />
         <Route path="info" element={<EssentialInfo />} />
+        <Route path="inbox" element={<Notifications />} />
         <Route path="care-plan-doc" element={<CarePlanDoc />} />
         <Route path="settings" element={<Settings />} />
         <Route path="settings/access" element={<AccessSchedule />} />

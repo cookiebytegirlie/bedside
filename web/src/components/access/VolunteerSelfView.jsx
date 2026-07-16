@@ -9,7 +9,7 @@ function shiftTimeLabel(shift) {
 
 function ShiftRow({ shift, requestStatus, onSwap, onCantMake }) {
   return (
-    <div className="rounded-2xl bg-white p-4 shadow-card">
+    <div className="rounded-card border border-line bg-white p-4">
       <p className="text-base font-bold text-ink">{shift.dayOfWeek}</p>
       <p className="text-sm font-semibold text-muted">{shiftTimeLabel(shift)}{shift.recurring ? ' · Weekly' : ''}</p>
 
@@ -56,7 +56,7 @@ export default function VolunteerSelfView({ volunteer, coordinator }) {
         <h2 className="mb-2 text-xl font-bold text-ink">My upcoming shifts</h2>
         <div className="space-y-2.5">
           {myShifts.length === 0 && (
-            <p className="rounded-2xl bg-white p-4 text-sm font-medium text-muted shadow-card">No shifts scheduled right now.</p>
+            <p className="rounded-card border border-line bg-white p-4 text-sm font-medium text-muted">No shifts scheduled right now.</p>
           )}
           {myShifts.map((shift) => (
             <ShiftRow
@@ -72,7 +72,7 @@ export default function VolunteerSelfView({ volunteer, coordinator }) {
 
       <section>
         <h2 className="mb-2 text-xl font-bold text-ink">My access level</h2>
-        <div className="flex items-center justify-between rounded-2xl bg-white p-4 shadow-card">
+        <div className="flex items-center justify-between rounded-card border border-line bg-white p-4">
           <span className="inline-block rounded-full bg-routine-bg px-3 py-1.5 text-sm font-bold text-routine-fg">
             {ACCESS_TIER_LABELS[volunteer.accessTier]}
           </span>
@@ -87,7 +87,7 @@ export default function VolunteerSelfView({ volunteer, coordinator }) {
         <button
           type="button"
           onClick={() => setRemindersOn((v) => !v)}
-          className="flex w-full items-center justify-between rounded-2xl bg-white p-4 shadow-card"
+          className="flex w-full items-center justify-between rounded-card border border-line bg-white p-4"
         >
           <span className="text-base font-bold text-ink">Shift reminders</span>
           <span

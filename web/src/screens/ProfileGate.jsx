@@ -26,7 +26,7 @@ function Avatar({ photo, initials, size = 'h-11 w-11', textSize = 'text-base' })
     return <img src={photo} alt="" className={`${size} shrink-0 rounded-full object-cover`} />
   }
   return (
-    <span className={`flex ${size} shrink-0 items-center justify-center rounded-full bg-sage-100 text-mist`}>
+    <span className={`flex ${size} shrink-0 items-center justify-center rounded-full bg-track text-ink`}>
       {initials === '+' ? (
         <UserIcon width={18} height={18} strokeWidth={1.8} />
       ) : (
@@ -41,8 +41,8 @@ function ProfileRow({ photo, name, role, initials, dashed, dim, onClick }) {
     <button
       type="button"
       onClick={onClick}
-      className={`flex w-full items-center gap-3 rounded-3xl px-4 py-2.5 text-left shadow-card transition-transform active:scale-[0.98] ${
-        dashed ? 'border-2 border-dashed border-sage-300 bg-transparent shadow-none' : 'bg-white'
+      className={`flex w-full items-center gap-3 rounded-card border px-4 py-2.5 text-left transition-transform active:scale-[0.98] ${
+        dashed ? 'border-dashed border-line bg-transparent' : 'border-line bg-white'
       } ${dim ? 'opacity-50' : ''}`}
     >
       <Avatar photo={photo} initials={initials} />
@@ -50,7 +50,7 @@ function ProfileRow({ photo, name, role, initials, dashed, dim, onClick }) {
         <span className="block truncate text-base font-bold leading-tight text-ink">{name}</span>
         <span className="block text-xs font-semibold leading-snug text-muted">{role}</span>
       </span>
-      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-mist text-white">
+      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-ink text-white">
         <ChevronRightIcon width={15} height={15} strokeWidth={2.5} />
       </span>
     </button>
@@ -62,19 +62,19 @@ function HeroCard({ photo, name, subtitle, dim, onClick }) {
     <button
       type="button"
       onClick={onClick}
-      className={`relative block w-full rounded-3xl bg-white px-5 pb-4 pt-11 text-left shadow-card transition-transform active:scale-[0.98] ${dim ? 'opacity-50' : ''}`}
+      className={`relative block w-full rounded-card border border-line bg-white px-5 pb-4 pt-11 text-left transition-transform active:scale-[0.98] ${dim ? 'opacity-50' : ''}`}
     >
       <img
         src={photo}
         alt=""
-        className="absolute left-1/2 top-0 h-24 w-24 -translate-x-1/2 -translate-y-1/2 rounded-full border-4 border-white object-cover shadow-card"
+        className="absolute left-1/2 top-0 h-24 w-24 -translate-x-1/2 -translate-y-1/2 rounded-full border-4 border-white object-cover shadow-soft"
       />
       <div className="flex items-center gap-3">
         <span className="min-w-0 flex-1">
           <span className="block text-xl font-bold leading-tight text-ink">{name}</span>
           <span className="block text-sm font-semibold leading-tight text-muted">{subtitle}</span>
         </span>
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-mist text-white">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-ink text-white">
           <ChevronRightIcon width={16} height={16} strokeWidth={2.5} />
         </span>
       </div>
@@ -253,7 +253,7 @@ function PinStep({ profile, onBack }) {
           <span
             key={i}
             className={`h-3.5 w-3.5 rounded-full border-2 ${
-              i < pin.length ? (error === 'wrong' ? 'border-attention-fg bg-attention-fg' : 'border-mist bg-mist') : 'border-ink/15'
+              i < pin.length ? (error === 'wrong' ? 'border-attention-fg bg-attention-fg' : 'border-ink bg-ink') : 'border-ink/15'
             }`}
           />
         ))}
@@ -280,7 +280,7 @@ function PinStep({ profile, onBack }) {
               type="button"
               disabled={locked}
               onClick={() => press(key)}
-              className="flex items-center justify-center rounded-full bg-white text-lg font-bold text-ink shadow-card active:scale-[0.96] disabled:active:scale-100"
+              className="flex items-center justify-center rounded-full bg-track text-lg font-medium text-ink active:scale-[0.96] disabled:active:scale-100"
               style={{ height: '46px' }}
             >
               {key === 'back' ? <BackspaceIcon width={17} height={17} strokeWidth={2} /> : key}
@@ -290,12 +290,12 @@ function PinStep({ profile, onBack }) {
       </div>
 
       {biometricSupported && (
-        <div className="mx-auto mt-6 flex max-w-[240px] flex-col items-center gap-1 border-t border-sage-100 pt-5">
+        <div className="mx-auto mt-6 flex max-w-[240px] flex-col items-center gap-1 border-t border-line pt-5">
           <button
             type="button"
             onClick={tryBiometric}
             disabled={biometricBusy || locked}
-            className="flex items-center gap-1.5 text-sm font-semibold text-mist disabled:opacity-40"
+            className="flex items-center gap-1.5 text-sm font-semibold text-ink disabled:opacity-40"
           >
             <FingerprintIcon width={17} height={17} strokeWidth={1.8} />
             {biometricBusy ? 'Waiting…' : 'Use Facial/Fingerprint Recognition'}
@@ -352,7 +352,7 @@ function CodeGuestStep({ onBack }) {
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Your first name"
-          className="w-full rounded-full border border-sage-200 bg-white px-4 py-2.5 text-base font-semibold text-ink placeholder:font-medium placeholder:text-ink/30 focus:border-mist focus:outline-none"
+          className="w-full rounded-full border border-line bg-white px-4 py-2.5 text-base font-semibold text-ink placeholder:font-medium placeholder:text-ink/30 focus:border-ink focus:outline-none"
         />
         <input
           value={code}
@@ -362,7 +362,7 @@ function CodeGuestStep({ onBack }) {
           }}
           inputMode="numeric"
           placeholder="6-digit code"
-          className="w-full rounded-full border border-sage-200 bg-white px-4 py-2.5 text-center text-lg font-bold tracking-[0.3em] text-ink placeholder:text-sm placeholder:font-medium placeholder:tracking-normal placeholder:text-ink/30 focus:border-mist focus:outline-none"
+          className="w-full rounded-full border border-line bg-white px-4 py-2.5 text-center text-lg font-bold tracking-[0.3em] text-ink placeholder:text-sm placeholder:font-medium placeholder:tracking-normal placeholder:text-ink/30 focus:border-ink focus:outline-none"
         />
         {error === 'invalid-code' && (
           <p className="text-center text-xs font-semibold text-attention-fg">That code isn't valid — check with your coordinator.</p>
@@ -373,7 +373,7 @@ function CodeGuestStep({ onBack }) {
         <button
           type="submit"
           disabled={!name.trim() || code.length !== CODE_LENGTH}
-          className="w-full rounded-full bg-mist py-2.5 text-base font-bold text-white disabled:opacity-40"
+          className="w-full rounded-full bg-ink py-2.5 text-base font-bold text-white disabled:opacity-40"
         >
           Continue
         </button>
@@ -394,8 +394,8 @@ function TimeBlockedStep({ label, startHour, endHour, onRecheck, onBack }) {
         <ArrowLeftIcon width={22} height={22} strokeWidth={2} />
       </button>
 
-      <div className="mt-12 rounded-3xl bg-white p-5 text-center shadow-card">
-        <span className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-watch-bg text-watch-fg">
+      <div className="mt-12 rounded-card border border-line bg-white p-5 text-center">
+        <span className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-track text-ink">
           <ClockIcon width={19} height={19} strokeWidth={2} />
         </span>
         <p className="text-lg font-bold text-ink">Not available right now</p>
@@ -407,7 +407,7 @@ function TimeBlockedStep({ label, startHour, endHour, onRecheck, onBack }) {
       <button
         type="button"
         onClick={onRecheck}
-        className="mt-3 w-full rounded-full bg-mist py-2.5 text-base font-bold text-white"
+        className="mt-3 w-full rounded-full bg-ink py-2.5 text-base font-bold text-white"
       >
         Check again
       </button>
@@ -443,10 +443,10 @@ export default function ProfileGate() {
   const handlePickGuest = () => gateThenGo('code', 'General volunteer sign-in', generalSlot)
 
   return (
-    <div className="relative bg-household flex min-h-screen flex-col items-center justify-center px-5 py-3">
-      <img src={householdLogo} alt="Bedside" className="mb-1.5 h-9 w-9 rounded-xl shadow-card" />
+    <div className="relative flex min-h-screen flex-col items-center justify-center bg-white px-5 py-3">
+      <img src={householdLogo} alt="Bedside" className="mb-1.5 h-9 w-9 rounded-[9px] shadow-soft" />
       <p className="text-center text-lg font-bold text-ink">{household.preferredName}'s Household</p>
-      <p className="mb-3 text-center text-[9px] font-bold uppercase tracking-wide text-mist">
+      <p className="mb-3 text-center text-[9px] font-bold uppercase tracking-wide text-faint">
         Demo · Synthetic data only
       </p>
 
@@ -467,7 +467,7 @@ export default function ProfileGate() {
 
       <Link
         to={`/household/${householdId}/privacy`}
-        className="mt-2.5 flex items-center gap-1.5 text-xs font-semibold text-muted hover:text-mist"
+        className="mt-2.5 flex items-center gap-1.5 text-xs font-semibold text-muted hover:text-ink"
       >
         <ShieldIcon width={13} height={13} strokeWidth={2} />
         How this demo protects your data

@@ -49,7 +49,7 @@ export default function AccessSchedule() {
   return (
     <>
       <OnDutyHeader />
-      <main className="bg-household flex-1 px-5 pb-6 pt-6">
+      <main className="bg-white flex-1 px-5 pb-6 pt-6">
         <h1 className="mb-5 text-center text-2xl font-bold text-ink">Volunteer Access &amp; Schedule</h1>
         {content}
       </main>

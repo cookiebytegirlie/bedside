@@ -33,7 +33,7 @@ export const household = {
 // used for Ellie so her card reads as an invitation, not a role listing.
 export const profiles = [
   { id: 'daniel', name: 'Daniel Voss', role: 'Family', initials: 'DV', pin: '0000' },
-  { id: 'priya', name: 'Priya', role: 'Nurse', initials: 'P', pin: '0000' },
+  { id: 'priya', name: 'Priya', role: 'Nurse', initials: 'PA', pin: '0000' },
   {
     id: 'marcus',
     name: 'Marcus',
@@ -315,7 +315,50 @@ export const medRequestSupportingRecord = [
 // Frequency options a nurse can propose in a titration request.
 export const medFrequencyOptions = ['Every 4 hrs', 'Every 6 hrs', 'Every 8 hrs', 'Every 12 hrs', 'Twice daily', 'Once daily']
 
+// LOG AUTHORSHIP RULE — keep this straight when adding or generating entries.
+// A log's `author` may ONLY be an ACTIVE PROFILE that can sign in and author:
+// Daniel (family), Priya (nurse), Marcus (permanent volunteer/aide), or a
+// guest volunteer (any name, e.g. "Lauren T."). It must NEVER be a directory-
+// only contact — Grace Lin, Marisol Voss, James Whitfield, or Dr. Sam Okafor —
+// who appear in contacts/access screens but never at the bedside authoring a
+// note. Authors use the first-name + role form ("Priya (nurse)") to match the
+// sign-in profiles; the canonical full name "Priya Anand" lives in contacts
+// and in `escalatedTo`.
 export const initialLogs = [
+  // Seed notification-center items so the inbox, bell badge, and digest count
+  // are populated on a fresh load without reproducing the log flow. One
+  // escalation (a human-confirmed red that paged the nurse) and one
+  // disagreement (AI read red, caregiver logged lower). Both are 2 days old.
+  {
+    id: 'log-esc-seed',
+    timestamp: '2026-07-11T02:04:00-07:00',
+    author: 'Lauren (volunteer)',
+    type: 'shift-note',
+    summary: 'Labored breathing and unrelieved pain around 2am. Ellie seemed frightened; comfort meds gave little relief.',
+    urgency: 'red',
+    rawTranscript:
+      "She was breathing really hard and kept saying the pain wasn't going away — she looked scared. I gave the PRN dose but it didn't seem to help much.",
+    escalatedAt: '2026-07-11T02:04:30-07:00',
+    escalatedTo: 'Priya Anand',
+    aiResponse: {
+      urgency_reason:
+        'Labored breathing with unrelieved pain and visible distress overnight — warrants a prompt nurse assessment.',
+    },
+  },
+  {
+    id: 'log-dis-seed',
+    timestamp: '2026-07-11T16:20:00-07:00',
+    author: 'Marcus (volunteer)',
+    type: 'shift-note',
+    summary: 'Ellie coughed on sips of water and sounded a bit congested, but stayed in good spirits and had her afternoon tea.',
+    urgency: 'yellow',
+    rawTranscript:
+      'She kept coughing when she drank water, sounded kind of chesty, but she was cheerful and enjoyed her tea.',
+    aiUrgency: 'red',
+    keptUrgency: 'yellow',
+    aiUrgencyReason:
+      'Coughing on fluids with congestion can signal aspiration risk — worth a clinical check even if she seems comfortable.',
+  },
   {
     id: 'log-1',
     timestamp: '2026-07-09T09:15:00-07:00',
