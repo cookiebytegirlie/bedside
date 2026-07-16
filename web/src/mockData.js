@@ -281,6 +281,9 @@ export const ellieProfile = {
 // see only the behavioral/comfort summary.
 export const visitDigest = {
   lastVisit: 'Tuesday · 2 days ago',
+  // Glance-first headline (Section 4). Agent emits this via the `tldr` field
+  // on get-trends; the client normalizer maps it to `headline` here.
+  headline: 'Respiratory symptoms are progressing across the last 12 shifts.',
   needsYou: {
     clinicalOnly: true,
     count: 1,

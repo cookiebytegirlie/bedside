@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { visitDigest as fallbackDigest } from '../mockData'
 import { canSeeMeds } from '../utils/roles'
 import { useHousehold } from '../state/HouseholdContext'
@@ -13,6 +13,40 @@ function WorkingRow({ status, label }) {
       {status === 'no' && <XIcon width={16} height={16} strokeWidth={2.5} className="shrink-0 text-attention-fg" />}
       {status === 'mixed' && <span className="h-3 w-3 shrink-0 rounded-full border-2 border-watch-fg" />}
       <span className="text-[13px] font-medium text-ink">{label}</span>
+    </div>
+  )
+}
+
+// One row of the "What's changed" list. Collapsed: icon + title + [+].
+// Expanded: title takes on the soft track fill and the agent's full detail
+// appears below, separated by a hairline. Detail is never truncated — we're
+// only hiding the vertical space until the user asks for it.
+function ChangedChip({ item, isFirst }) {
+  const [open, setOpen] = useState(false)
+  const Icon = CHANGE_ICON[item.icon] || TrendDownIcon
+  return (
+    <div className={isFirst ? '' : 'border-t border-line'}>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className={`flex w-full items-center gap-3 px-4 py-3 text-left transition-colors ${
+          open ? 'bg-track' : 'bg-white active:bg-track'
+        }`}
+      >
+        <Icon width={17} height={17} strokeWidth={2} className="shrink-0 text-icon" />
+        <p className={`min-w-0 flex-1 text-[14px] tracking-tight text-ink ${open ? 'font-bold' : 'font-semibold'}`}>
+          {item.title}
+        </p>
+        <span aria-hidden className="text-[18px] font-medium leading-none text-faint">
+          {open ? '−' : '+'}
+        </span>
+      </button>
+      {open && (
+        <div className="border-t border-line bg-white px-4 py-3">
+          <p className="text-[13px] font-medium leading-snug text-ink/70">{item.detail}</p>
+        </div>
+      )}
     </div>
   )
 }
@@ -120,6 +154,15 @@ export default function VisitDigestModal({ open, onClose, role, onOpenInbox }) {
           </div>
         ) : (
         <div className="space-y-4">
+          {/* Glance-first headline (Section 4). One-sentence tldr from the
+              agent, or the sample's if we're on fallback. Display headline
+              only — no fill / callout box — to stay in Sydney's monochrome. */}
+          {rendered.headline && (
+            <p className="text-[18px] font-bold leading-snug tracking-tight text-ink">
+              {rendered.headline}
+            </p>
+          )}
+
           {/* Actionable items live in the notification center now — the digest
               just shows a glanceable count that links out. Only genuinely-open
               (unacknowledged / unresolved) items are counted. */}
@@ -154,19 +197,10 @@ export default function VisitDigestModal({ open, onClose, role, onOpenInbox }) {
 
           <section>
             <h3 className="mb-2 text-[15px] font-bold text-ink">What’s changed</h3>
-            <div className="space-y-3 rounded-card border border-line bg-white p-4">
-              {(rendered.changed ?? []).map((c) => {
-                const Icon = CHANGE_ICON[c.icon] || TrendDownIcon
-                return (
-                  <div key={c.title} className="flex gap-3">
-                    <Icon width={17} height={17} strokeWidth={2} className="mt-0.5 shrink-0 text-icon" />
-                    <div className="min-w-0">
-                      <p className="text-[14px] font-bold text-ink">{c.title}</p>
-                      <p className="text-[13px] font-medium leading-snug text-ink/70">{c.detail}</p>
-                    </div>
-                  </div>
-                )
-              })}
+            <div className="overflow-hidden rounded-card border border-line bg-white">
+              {(rendered.changed ?? []).map((c, i) => (
+                <ChangedChip key={c.title} item={c} isFirst={i === 0} />
+              ))}
             </div>
           </section>
 

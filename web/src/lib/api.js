@@ -159,6 +159,11 @@ function normalizeDigest(data) {
   const needsList = [...arr(d.needs_you), ...arr(d.flags)].map(asText).filter(Boolean)
   const patternText = [asText(d.pattern), ...arr(d.patterns).map(asText)].filter(Boolean).join(' ')
 
+  // Glance-first headline (Section 4). Agent emits `tldr` (or `headline` as a
+  // fallback name). Trimmed one-liner; if the agent returned nothing usable
+  // here, we fall back to the sample's headline downstream.
+  const headline = String(d.tldr ?? d.headline ?? '').replace(/\s+/g, ' ').trim()
+
   const changed = [...arr(d.whats_changed), ...arr(d.trends)]
     .map((c) => ({
       icon: CHANGE_ICON_BY_DIRECTION[c?.direction] || 'trend-down',
@@ -193,6 +198,7 @@ function normalizeDigest(data) {
 
   return {
     lastVisit: fallbackDigest.lastVisit,
+    headline: headline || fallbackDigest.headline,
     needsYou: needsList.length
       ? { clinicalOnly: true, count: needsList.length, text: needsList.join(' '), cta: fallbackDigest.needsYou.cta }
       : fallbackDigest.needsYou,
