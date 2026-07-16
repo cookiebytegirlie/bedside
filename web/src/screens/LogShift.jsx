@@ -331,7 +331,13 @@ function NotesSection({ sessionId, flag, setFlag }) {
     // Persist to Supabase (best-effort) and reflect on the in-memory timeline.
     // The urgency saved is the caregiver's own flag — the AI's read is only a
     // suggestion they can accept (which updates the flag) or ignore.
-    await saveLogEntry({ transcript, response: result, author: activeProfile?.name, urgency: flag })
+    // Guest volunteers (loginWithCode) store their name untagged (e.g. "Lauren");
+    // the DB convention (per the log-authorship rule) tags them as "Lauren
+    // (volunteer)" so they're distinguishable from directory-only contacts.
+    const authorName = activeProfile?.id?.startsWith('guest-')
+      ? `${activeProfile.name} (volunteer)`
+      : activeProfile?.name
+    await saveLogEntry({ transcript, response: result, author: authorName, urgency: flag })
     // Saving a "Needs attention" entry is what actually pages the on-call
     // nurse — so the page carries the real note, not a placeholder. Stamp the
     // escalation onto the entry so the Timeline can show the "nurse notified
