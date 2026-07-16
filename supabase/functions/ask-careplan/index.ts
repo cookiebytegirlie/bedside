@@ -23,37 +23,14 @@ const MOCK_RESPONSE = {
   sources: ["careplan.md#comfort-measures"],
 };
 
-// DO's Agent Platform surfaces retrieval metadata in different fields
-// depending on version. Try several plausible shapes; log the raw JSON
-// once against a live call and adjust here if none match.
-function extractSources(json: unknown): string[] {
-  if (typeof json !== "object" || json === null) return [];
-  const j = json as Record<string, unknown>;
-  const message = (j.choices as Array<Record<string, unknown>> | undefined)
-    ?.[0]?.message as Record<string, unknown> | undefined;
-
-  const candidates: unknown[] = [
-    (j.retrieval as Record<string, unknown> | undefined)?.retrieved_data,
-    j.retrieval_results,
-    j.sources,
-    message?.context,
-    message?.sources,
-    message?.retrieval,
-  ];
-
-  for (const c of candidates) {
-    if (Array.isArray(c) && c.length > 0) {
-      return c.map((item) => {
-        if (typeof item === "string") return item;
-        if (typeof item === "object" && item !== null) {
-          const o = item as Record<string, unknown>;
-          const label = o.filename ?? o.name ?? o.title ?? o.source ?? o.id;
-          return isString(label) ? label : JSON.stringify(item);
-        }
-        return String(item);
-      });
-    }
-  }
+// DO's Agent Platform response for this deployment (glm-5.2 backing model,
+// KB attached) does not surface retrieval metadata in the response body -
+// verified live: only `id/object/created/model/choices/usage` are present,
+// with `choices[0].message.reasoning_content` showing the KB text the model
+// consulted but no structured citations. Sources stays empty for now; the
+// answer itself is grounded (traceable back to careplan.md phrasing), and
+// UI treatment for the empty-sources case is a follow-up.
+function extractSources(_json: unknown): string[] {
   return [];
 }
 

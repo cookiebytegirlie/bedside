@@ -8,8 +8,10 @@ import {
   generalVolunteerSlot,
   defaultGeneralCode,
   dailyTasks,
+  visitDigest as fallbackDigest,
 } from '../mockData'
-import { isWithinWindow, formatWindow } from '../utils/time'
+import { isWithinWindow } from '../utils/time'
+import { fetchVisitDigest, refreshVisitDigest as invalidateDigestCache } from '../lib/api'
 
 const HouseholdContext = createContext(null)
 
@@ -19,10 +21,6 @@ let logCounter = initialLogs.length
 // (10-15 minutes of inactivity before automatic logoff).
 const SESSION_TIMEOUT_MS = 15 * 60 * 1000
 const ACTIVITY_EVENTS = ['pointerdown', 'keydown', 'touchstart']
-
-// How often an active scheduled session (a volunteer with a shift window)
-// re-checks whether it's still within that window.
-const SCHEDULE_POLL_MS = 30000
 
 function initialsFor(name) {
   const parts = name.trim().split(/\s+/)
@@ -80,6 +78,19 @@ export function HouseholdProvider({ children }) {
   const [secondsUntilTimeout, setSecondsUntilTimeout] = useState(null)
   const expiresAtRef = useRef(null)
 
+  // Digest state lives here, not in the modal, so closing the modal cannot
+  // cancel or restart the ~60s get-trends fetch. Fire-once per provider mount;
+  // the modal is a pure reader. `digestSeen` tracks whether the user has
+  // opened the modal since the last resolve — it gates the toast + bell.
+  const [digest, setDigest] = useState(null)
+  const [digestPending, setDigestPending] = useState(false)
+  const [digestSeen, setDigestSeen] = useState(false)
+  // Bumping this counter is how the toast asks the timeline (which mounts the
+  // modal) to open. Watching a monotonic counter avoids the "flag stuck true"
+  // pitfall of a boolean.
+  const [digestOpenRequest, setDigestOpenRequest] = useState(0)
+  const digestPromiseRef = useRef(null)
+
   const logAccess = useCallback((actor, action, detail) => {
     // Updater must stay pure (no shared-counter side effects) — StrictMode
     // double-invokes it in dev, and a mutable counter here produced
@@ -105,6 +116,50 @@ export function HouseholdProvider({ children }) {
       ].slice(0, 50)
     })
   }, [])
+
+  // Subscribe to a digest fetch promise and mirror its result into React state.
+  // Guarded against stale promises so a refresh mid-fetch always wins.
+  const runDigestFetch = useCallback((promise) => {
+    digestPromiseRef.current = promise
+    setDigestPending(true)
+    setDigestSeen(false)
+    promise
+      .then((result) => {
+        if (digestPromiseRef.current !== promise) return
+        setDigest(result || { ...fallbackDigest, _fallback: true })
+        setDigestPending(false)
+      })
+      .catch(() => {
+        if (digestPromiseRef.current !== promise) return
+        setDigest({ ...fallbackDigest, _fallback: true })
+        setDigestPending(false)
+      })
+  }, [])
+
+  // Fire-once prefetch on provider mount — before PIN, before navigation, so
+  // the ~30-90s DO trends call runs while the user is doing anything else.
+  useEffect(() => {
+    runDigestFetch(fetchVisitDigest())
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const refreshDigest = useCallback(() => {
+    runDigestFetch(invalidateDigestCache())
+  }, [runDigestFetch])
+
+  // Called when the modal actually opens — flips digestReady off so the toast
+  // and any bell indicator relax.
+  const markDigestSeen = useCallback(() => {
+    setDigestSeen(true)
+  }, [])
+
+  // The toast's "View →" action bumps this counter; timeline listens and
+  // opens the modal in response.
+  const requestOpenDigest = useCallback(() => {
+    setDigestOpenRequest((n) => n + 1)
+  }, [])
+
+  const digestReady = !digestPending && digest !== null && !digestSeen
 
   const loginWithPin = useCallback((profileId, pin) => {
     const profile = profiles.find((p) => p.id === profileId)
@@ -213,26 +268,14 @@ export function HouseholdProvider({ children }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeProfile])
 
-  // Scheduled profiles only (Marcus's shift, or a general-code sign-in):
-  // keep re-checking the clock while signed in, and log out automatically
-  // once the window closes. Family and nurse profiles have no `schedule`,
-  // so they're exempt and can use the app anytime.
-  useEffect(() => {
-    if (!activeProfile?.schedule) return
-
-    const { startHour, endHour } = activeProfile.schedule
-    const interval = setInterval(() => {
-      if (isWithinWindow(startHour, endHour)) return
-      setActiveProfile((current) => {
-        if (current) {
-          logAccess(current.name, 'Auto-logged out', `Access window ended (${formatWindow(startHour, endHour)})`)
-        }
-        return null
-      })
-    }, SCHEDULE_POLL_MS)
-
-    return () => clearInterval(interval)
-  }, [activeProfile, logAccess])
+  // Schedule enforcement is login-gated only (see loginWithPin above): a
+  // volunteer with a 3pm-8pm window cannot sign in at 9pm. We deliberately
+  // do NOT poll the clock mid-session and boot the user - a background
+  // interval that terminates a session while the user is mid-action looks
+  // like "the app just logged me out for no reason" (and in demo/testing
+  // hours outside the volunteer's schedule, it fires every 30 seconds).
+  // Production auto-logoff belongs to the inactivity timer above, which
+  // resets on activity events and is the actual HIPAA-shaped requirement.
 
   const addLog = useCallback((entry) => {
     logCounter += 1
@@ -388,6 +431,14 @@ export function HouseholdProvider({ children }) {
     updateProfileSchedule,
     updateGeneralSlot,
     regenerateGeneralCode,
+    // Digest — session-scoped, fire-once. See runDigestFetch above.
+    digest,
+    digestPending,
+    digestReady,
+    refreshDigest,
+    markDigestSeen,
+    requestOpenDigest,
+    digestOpenRequest,
   }
 
   return <HouseholdContext.Provider value={value}>{children}</HouseholdContext.Provider>

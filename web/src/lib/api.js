@@ -87,7 +87,18 @@ function normalize(data, transcript) {
     urgency,
     urgency_reason: typeof d.urgency_reason === 'string' ? d.urgency_reason : '',
     medications: Array.isArray(d.medications)
-      ? d.medications.map((m) => ({ name: String(m?.name ?? ''), time: String(m?.time ?? '') })).filter((m) => m.name)
+      ? d.medications
+          .map((m) => {
+            const out = { name: String(m?.name ?? ''), time: String(m?.time ?? '') }
+            // Optional dose/route/reason — pass through as strings when the
+            // agent captured them, so formatMedGiven can render the fuller
+            // "morphine 5mg PO @ 20:20 for pain" line instead of just name+time.
+            if (typeof m?.dose === 'string' && m.dose.trim()) out.dose = m.dose
+            if (typeof m?.route === 'string' && m.route.trim()) out.route = m.route
+            if (typeof m?.reason === 'string' && m.reason.trim()) out.reason = m.reason
+            return out
+          })
+          .filter((m) => m.name)
       : [],
     mood: d.mood ?? null,
     interventions: Array.isArray(d.interventions)
@@ -125,9 +136,12 @@ function asText(item) {
 
 // Best-effort read of whether an intervention helped, from a free-text outcome
 // plus an optional count, mapped to the three states the WorkingRow renders.
+// 'less effective|diminishing|declining|waning|reduced' are treated as mixed —
+// a fading intervention rendered as 'working' is a safety issue in a hospice
+// app, not a cosmetic one.
 function workingStatus(outcome, count) {
   const o = String(outcome || '').toLowerCase()
-  if (/mixed|sometimes|inconsistent|varied|partial/.test(o)) return 'mixed'
+  if (/mixed|sometimes|inconsistent|varied|partial|less effective|diminishing|declining|waning|reduced/.test(o)) return 'mixed'
   if (count === 0 || /\bno\b|didn'?t|did not|not help|unhelpful|ineffective/.test(o)) return 'no'
   return 'yes'
 }
@@ -144,6 +158,11 @@ function normalizeDigest(data) {
   // { trends, patterns, flags }. Accept either so we render whatever it emits.
   const needsList = [...arr(d.needs_you), ...arr(d.flags)].map(asText).filter(Boolean)
   const patternText = [asText(d.pattern), ...arr(d.patterns).map(asText)].filter(Boolean).join(' ')
+
+  // Glance-first headline (Section 4). Agent emits `tldr` (or `headline` as a
+  // fallback name). Trimmed one-liner; if the agent returned nothing usable
+  // here, we fall back to the sample's headline downstream.
+  const headline = String(d.tldr ?? d.headline ?? '').replace(/\s+/g, ' ').trim()
 
   const changed = [...arr(d.whats_changed), ...arr(d.trends)]
     .map((c) => ({
@@ -179,6 +198,7 @@ function normalizeDigest(data) {
 
   return {
     lastVisit: fallbackDigest.lastVisit,
+    headline: headline || fallbackDigest.headline,
     needsYou: needsList.length
       ? { clinicalOnly: true, count: needsList.length, text: needsList.join(' '), cta: fallbackDigest.needsYou.cta }
       : fallbackDigest.needsYou,
@@ -198,8 +218,20 @@ function normalizeDigest(data) {
 // empty response taking 60s), so we stop and fall back instead.
 const DIGEST_MAX_ATTEMPTS = 4
 const DIGEST_SLOW_EMPTY_MS = 8000
+// Per-fetch cap that covers the server's full retry budget in get-trends
+// (two 90s attempts) plus a small margin, so the client waits for the server
+// to serve either the real digest or its own SAFE_FALLBACK rather than
+// aborting first. The DO trends agent takes ~32s in the playground but is
+// materially slower via the API path, hence the wide cap.
+const DIGEST_TIMEOUT_MS = 200_000
 
-export async function fetchVisitDigest() {
+// Module-scoped promise cache. At ~58s live latency the modal cannot afford
+// to cold-start on open; startVisitDigestPrefetch() fires from main.jsx on
+// app load so the fetch is in flight by the time the user reaches the
+// timeline. Any await after the first hop shares the same in-flight promise.
+let _digestPromise = null
+
+async function fetchVisitDigestFresh() {
   if (!isBackendConfigured()) {
     // No key yet — keep a brief "reasoning" beat so the loading state is
     // visible, then hand back the hardcoded digest.
@@ -217,6 +249,7 @@ export async function fetchVisitDigest() {
           Authorization: `Bearer ${ANON_KEY}`,
         },
         body: JSON.stringify({}),
+        signal: AbortSignal.timeout(DIGEST_TIMEOUT_MS),
       })
       if (!res.ok) throw new Error(`get-trends returned HTTP ${res.status}`)
       const digest = normalizeDigest(await res.json())
@@ -230,12 +263,46 @@ export async function fetchVisitDigest() {
       }
       console.info(`[fetchVisitDigest] empty response in ${elapsed}ms, retrying (${attempt}/${DIGEST_MAX_ATTEMPTS})`)
     } catch (err) {
-      // A network/HTTP error won't fix itself on retry — stop and fall back.
+      // A network/HTTP error or the abort won't fix itself on retry — stop.
       console.warn('[fetchVisitDigest] falling back to hardcoded digest:', err?.message || err)
       break
     }
   }
   return { ...fallbackDigest, _fallback: true }
+}
+
+// Wraps fetchVisitDigestFresh so a fallback result doesn't get cached — if
+// the prefetch times out and resolves to the sample fallback, the next call
+// (refresh button, next prefetch, whatever) actually retries the agent
+// instead of silently returning the same fallback forever.
+function fetchAndCache() {
+  const promise = fetchVisitDigestFresh().then((result) => {
+    if (result?._fallback) _digestPromise = null
+    return result
+  })
+  _digestPromise = promise
+  promise.catch(() => { _digestPromise = null })
+  return promise
+}
+
+// Kick off the digest fetch once, at app load. If called again before it
+// resolves, returns the same in-flight promise so consumers share the wait
+// instead of duplicating the ~58s request.
+export function startVisitDigestPrefetch() {
+  if (!_digestPromise) fetchAndCache()
+  return _digestPromise
+}
+
+// Invalidate the cache and start a fresh fetch — used by the modal's refresh
+// button so tapping it always re-hits the agent.
+export function refreshVisitDigest() {
+  return fetchAndCache()
+}
+
+// Public API preserved: returns the cached (possibly in-flight) promise, or
+// kicks one off if nothing has prefetched yet.
+export function fetchVisitDigest() {
+  return startVisitDigestPrefetch()
 }
 
 // The deployed summarize function intermittently returns a parse-failure stub

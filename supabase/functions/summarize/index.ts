@@ -40,42 +40,75 @@ const MOCK_RESPONSE = {
   confidence: "high",
 } as const;
 
-function stripFences(raw: string): string {
+// Extracts JSON from a model response that may wrap the object in fences or
+// prose. Order of preference: any fenced ```json ... ``` block, then the
+// first { through the last }, then the raw string as a last resort.
+function extractJson(raw: string): string {
   const trimmed = raw.trim();
-  const fenced = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/);
-  return fenced ? fenced[1].trim() : trimmed;
+  const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+  if (fenced) return fenced[1].trim();
+  const firstBrace = trimmed.indexOf("{");
+  const lastBrace = trimmed.lastIndexOf("}");
+  if (firstBrace !== -1 && lastBrace > firstBrace) {
+    return trimmed.slice(firstBrace, lastBrace + 1);
+  }
+  return trimmed;
 }
 
 function isStringOrNull(v: unknown): v is string | null {
   return v === null || typeof v === "string";
 }
 
+// Hospice app - a malformed model response must not silently become a
+// client-side default. This is strict on purpose: enum members must match
+// exactly, every required field must be present with the right type. Any
+// mismatch drops the whole entry to SAFE_FALLBACK, loudly, so the log line
+// shows exactly what came back. The client's normalize() is a second layer
+// of belt, not a replacement for suspenders.
 function isValidShape(o: unknown): boolean {
   if (typeof o !== "object" || o === null) return false;
   const x = o as Record<string, unknown>;
 
-  if (!isString(x.summary)) return false;
+  if (typeof x.summary !== "string") return false;
   if (x.urgency !== "green" && x.urgency !== "yellow" && x.urgency !== "red") {
     return false;
   }
-  if (!isString(x.urgency_reason)) return false;
+  if (typeof x.urgency_reason !== "string") return false;
 
-  if (!Array.isArray(x.medications)) return false;
-  for (const m of x.medications) {
-    if (typeof m !== "object" || m === null) return false;
-    const mm = m as Record<string, unknown>;
-    if (!isString(mm.name) || !isString(mm.time)) return false;
+  // medications and interventions: null (or missing) means "nothing to
+  // report" and is semantically identical to []. If present as an array, its
+  // items must still match the spec-§10 shape exactly.
+  if (x.medications != null) {
+    if (!Array.isArray(x.medications)) return false;
+    for (const m of x.medications) {
+      if (typeof m !== "object" || m === null) return false;
+      const mm = m as Record<string, unknown>;
+      if (typeof mm.name !== "string" || typeof mm.time !== "string") {
+        return false;
+      }
+      // dose / route / reason are optional. Absent or null is fine (old rows
+      // won't have them). If present, they must be strings — anything else
+      // (number, object, boolean) is a shape violation.
+      for (const field of ["dose", "route", "reason"] as const) {
+        const v = mm[field];
+        if (v != null && typeof v !== "string") return false;
+      }
+    }
   }
 
   if (!isStringOrNull(x.mood)) return false;
 
-  if (!Array.isArray(x.interventions)) return false;
-  for (const i of x.interventions) {
-    if (typeof i !== "object" || i === null) return false;
-    const ii = i as Record<string, unknown>;
-    if (!isString(ii.what)) return false;
-    if (ii.worked !== "yes" && ii.worked !== "no" && ii.worked !== "unclear") {
-      return false;
+  if (x.interventions != null) {
+    if (!Array.isArray(x.interventions)) return false;
+    for (const i of x.interventions) {
+      if (typeof i !== "object" || i === null) return false;
+      const ii = i as Record<string, unknown>;
+      if (typeof ii.what !== "string") return false;
+      if (
+        ii.worked !== "yes" && ii.worked !== "no" && ii.worked !== "unclear"
+      ) {
+        return false;
+      }
     }
   }
 
@@ -132,7 +165,13 @@ Deno.serve(async (req) => {
     );
   }
 
-  const url = `${endpoint.replace(/\/$/, "")}/api/v1/chat/completions`;
+  // Normalise the endpoint in case the secret was pasted with a trailing
+  // slash or the full API path already appended (both are easy console-copy
+  // mistakes and would otherwise 404 with a doubled path).
+  const base = endpoint
+    .replace(/\/+$/, "")
+    .replace(/\/api\/v1(?:\/chat\/completions)?$/, "");
+  const url = `${base}/api/v1/chat/completions`;
 
   let content: string | null = null;
   try {
@@ -144,6 +183,10 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify({
         messages: [{ role: "user", content: transcript }],
+        // Cap output length. The spec-§10 JSON that this agent returns
+        // typically lands around 250-350 tokens; 400 leaves headroom without
+        // giving the model room to ramble and stretch latency.
+        max_completion_tokens: 400,
       }),
       signal: AbortSignal.timeout(60_000),
     });
@@ -166,7 +209,7 @@ Deno.serve(async (req) => {
 
   let parsed: unknown;
   try {
-    parsed = JSON.parse(stripFences(content));
+    parsed = JSON.parse(extractJson(content));
   } catch (err) {
     console.error("summarize: JSON.parse failed", err, "raw:", content);
     return jsonResponse(envelope({ ...SAFE_FALLBACK }));
@@ -177,5 +220,13 @@ Deno.serve(async (req) => {
     return jsonResponse(envelope({ ...SAFE_FALLBACK }));
   }
 
-  return jsonResponse(envelope(parsed as Record<string, unknown>));
+  // Normalize null/missing arrays to [] so the client always sees the same
+  // shape (spec §10). isValidShape already accepted null as equivalent.
+  const p = parsed as Record<string, unknown>;
+  const normalized = {
+    ...p,
+    medications: Array.isArray(p.medications) ? p.medications : [],
+    interventions: Array.isArray(p.interventions) ? p.interventions : [],
+  };
+  return jsonResponse(envelope(normalized));
 });

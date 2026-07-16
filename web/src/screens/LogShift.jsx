@@ -49,7 +49,11 @@ function useSpeechRecognition(onResult) {
     }
     recognition.onend = () => setListening(false)
     recognitionRef.current = recognition
-    return () => recognition.stop()
+    // abort() discards buffered audio without firing a final onresult; stop()
+    // would emit stray speech into the transcript as the component tears down.
+    return () => {
+      try { recognition.abort() } catch { /* not started */ }
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -64,7 +68,16 @@ function useSpeechRecognition(onResult) {
     }
   }
 
-  return { listening, supported, toggle }
+  // Force-stop for submit/tear-down paths. abort() (not stop()) discards any
+  // buffered speech so the transcript can't grow after this returns; stop()
+  // would fire one last onresult and append stray words.
+  const stop = () => {
+    if (!recognitionRef.current) return
+    try { recognitionRef.current.abort() } catch { /* not started */ }
+    setListening(false)
+  }
+
+  return { listening, supported, toggle, stop }
 }
 
 // Single-select as an iOS inset grouped list: white rows, hairline separators
@@ -294,10 +307,13 @@ function NotesSection({ sessionId, flag, setFlag }) {
   const [stage, setStage] = useState('idle') // idle | processing | result | saved
   const [result, setResult] = useState(null)
   const [recDismissed, setRecDismissed] = useState(false) // AI recommendation declined/handled
-  const { listening, supported, toggle } = useSpeechRecognition(setTranscript)
+  const { listening, supported, toggle, stop } = useSpeechRecognition(setTranscript)
 
   const process = async () => {
     if (!transcript.trim()) return
+    // Kill capture BEFORE firing summarize so late-arriving speech can't
+    // append to the transcript while the request is in flight.
+    stop()
     setStage('processing')
     const res = await summarizeShiftNote(transcript)
     setResult(res)
@@ -316,7 +332,13 @@ function NotesSection({ sessionId, flag, setFlag }) {
     // Persist to Supabase (best-effort) and reflect on the in-memory timeline.
     // The urgency saved is the caregiver's own flag — the AI's read is only a
     // suggestion they can accept (which updates the flag) or ignore.
-    await saveLogEntry({ transcript, response: result, author: activeProfile?.name, urgency: flag })
+    // Guest volunteers (loginWithCode) store their name untagged (e.g. "Lauren");
+    // the DB convention (per the log-authorship rule) tags them as "Lauren
+    // (volunteer)" so they're distinguishable from directory-only contacts.
+    const authorName = activeProfile?.id?.startsWith('guest-')
+      ? `${activeProfile.name} (volunteer)`
+      : activeProfile?.name
+    await saveLogEntry({ transcript, response: result, author: authorName, urgency: flag })
     // Saving a "Needs attention" entry is what actually pages the on-call
     // nurse — so the page carries the real note, not a placeholder. Stamp the
     // escalation onto the entry so the Timeline can show the "nurse notified
@@ -369,7 +391,7 @@ function NotesSection({ sessionId, flag, setFlag }) {
             <button
               type="button"
               onClick={toggle}
-              disabled={!supported}
+              disabled={!supported || stage === 'processing'}
               className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white transition-colors disabled:opacity-40 ${
                 listening ? 'animate-pulse bg-attention-solid' : 'bg-ink'
               }`}

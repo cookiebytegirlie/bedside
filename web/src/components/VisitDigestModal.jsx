@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
-import { visitDigest } from '../mockData'
-import { fetchVisitDigest } from '../lib/api'
+import { visitDigest as fallbackDigest } from '../mockData'
 import { canSeeMeds } from '../utils/roles'
 import { useHousehold } from '../state/HouseholdContext'
 import { CheckIcon, XIcon, BellIcon, TrendUpIcon, TrendDownIcon, MoonIcon, RefreshIcon, ChevronRightIcon } from './icons'
@@ -18,18 +17,36 @@ function WorkingRow({ status, label }) {
   )
 }
 
-// Placeholder shimmer shown while the get-trends agent reasons across the
-// shift logs (~20-30s). A moving skeleton — not a frozen screen — so the wait
-// reads as "computing" rather than "stuck".
-function SkeletonBlock({ lines = 2 }) {
+// One row of the "What's changed" list. Collapsed: icon + title + [+].
+// Expanded: title takes on the soft track fill and the agent's full detail
+// appears below, separated by a hairline. Detail is never truncated — we're
+// only hiding the vertical space until the user asks for it.
+function ChangedChip({ item, isFirst }) {
+  const [open, setOpen] = useState(false)
+  const Icon = CHANGE_ICON[item.icon] || TrendDownIcon
   return (
-    <div className="space-y-3 rounded-card border border-line bg-white p-4">
-      {Array.from({ length: lines }).map((_, i) => (
-        <div key={i} className="space-y-2">
-          <div className="h-3.5 w-1/3 animate-pulse rounded bg-ink/10" />
-          <div className="h-3 w-full animate-pulse rounded bg-ink/[0.07]" />
+    <div className={isFirst ? '' : 'border-t border-line'}>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className={`flex w-full items-center gap-3 px-4 py-3 text-left transition-colors ${
+          open ? 'bg-track' : 'bg-white active:bg-track'
+        }`}
+      >
+        <Icon width={17} height={17} strokeWidth={2} className="shrink-0 text-icon" />
+        <p className={`min-w-0 flex-1 text-[14px] tracking-tight text-ink ${open ? 'font-bold' : 'font-semibold'}`}>
+          {item.title}
+        </p>
+        <span aria-hidden className="text-[18px] font-medium leading-none text-faint">
+          {open ? '−' : '+'}
+        </span>
+      </button>
+      {open && (
+        <div className="border-t border-line bg-white px-4 py-3">
+          <p className="text-[13px] font-medium leading-snug text-ink/70">{item.detail}</p>
         </div>
-      ))}
+      )}
     </div>
   )
 }
@@ -38,35 +55,42 @@ function SkeletonBlock({ lines = 2 }) {
 // digest (escalations + medication patterns); volunteers see only the
 // behavioral/comfort summary.
 //
-// The content is generated live: on open (and on every refresh tap) we call
-// the get-trends agent, which reads the actual log table. `visitDigest` from
-// mockData is only a fallback if that call fails.
+// This is a pure reader of HouseholdContext.digest. The get-trends fetch
+// lives in HouseholdContext (fire-once at provider mount) so closing this
+// modal never cancels it and reopening never restarts it.
 export default function VisitDigestModal({ open, onClose, role, onOpenInbox }) {
-  const { unreadNotificationCount } = useHousehold()
-  const [digest, setDigest] = useState(visitDigest)
-  const [loading, setLoading] = useState(false)
+  const {
+    unreadNotificationCount,
+    digest,
+    digestPending,
+    refreshDigest,
+    markDigestSeen,
+  } = useHousehold()
 
-  async function loadDigest() {
-    setLoading(true)
-    try {
-      setDigest(await fetchVisitDigest())
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  // Re-fetch each time the modal is opened, so the content visibly arrives.
+  // Anything the user actually looks at counts as "seen":
+  //  - Opening the modal (open flips true) marks seen
+  //  - A refresh with the modal already open resets seen inside the context,
+  //    so we re-mark it when the fresh fetch resolves (pending flips false)
+  //    to keep the toast from firing under a modal the user is already in.
   useEffect(() => {
-    if (open) loadDigest()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open])
+    if (open && !digestPending) markDigestSeen()
+  }, [open, digestPending, markDigestSeen])
 
   if (!open) return null
+
+  // While pending, render the "Drafting your update…" panel (spec §3 copy).
+  // Once resolved, `digest` is the real payload from get-trends OR the
+  // sample fallback carrying _fallback: true. If for some reason `digest`
+  // is still null (shouldn't happen — provider fires on mount) fall back
+  // to the sample so the render never crashes.
+  const rendered = digest ?? { ...fallbackDigest, _fallback: true }
   const seeMeds = canSeeMeds(role)
-  const working = digest.working.filter((w) => seeMeds || !w.sensitive)
-  const attribution = loading
-    ? 'Reading the shift logs…'
-    : 'Analyzed 15 shift logs from 5 people · just now'
+  const working = (rendered.working ?? []).filter((w) => seeMeds || !w.sensitive)
+  const attribution = digestPending
+    ? 'Drafting your update…'
+    : rendered._fallback
+      ? 'Live analysis unavailable — showing a sample digest'
+      : 'Analyzed your recent shift logs · just now'
 
   return (
     <div
@@ -80,9 +104,9 @@ export default function VisitDigestModal({ open, onClose, role, onOpenInbox }) {
         <div className="mb-4 flex items-start justify-between gap-3">
           <div className="min-w-0">
             <h2 className="text-xl font-bold text-ink">Since your last visit</h2>
-            <p className="text-[12px] font-semibold text-muted">{digest.lastVisit}</p>
+            <p className="text-[12px] font-semibold text-muted">{rendered.lastVisit}</p>
             <p className="mt-0.5 flex items-center gap-1.5 text-[11px] font-medium text-muted">
-              {loading && (
+              {digestPending && (
                 <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-ink" aria-hidden />
               )}
               {attribution}
@@ -91,12 +115,12 @@ export default function VisitDigestModal({ open, onClose, role, onOpenInbox }) {
           <div className="flex shrink-0 items-center gap-1">
             <button
               type="button"
-              onClick={loadDigest}
-              disabled={loading}
+              onClick={refreshDigest}
+              disabled={digestPending}
               aria-label="Refresh digest"
               className="rounded-full p-1 text-muted active:scale-90 disabled:opacity-60"
             >
-              <RefreshIcon width={20} height={20} strokeWidth={2} className={loading ? 'animate-spin' : undefined} />
+              <RefreshIcon width={20} height={20} strokeWidth={2} className={digestPending ? 'animate-spin' : undefined} />
             </button>
             <button type="button" onClick={onClose} aria-label="Close" className="text-muted">
               <XIcon width={22} height={22} strokeWidth={2} />
@@ -104,20 +128,41 @@ export default function VisitDigestModal({ open, onClose, role, onOpenInbox }) {
           </div>
         </div>
 
-        {loading ? (
-          <div className="space-y-4">
-            {seeMeds && <SkeletonBlock lines={1} />}
-            <div>
-              <div className="mb-2 h-3.5 w-28 animate-pulse rounded bg-ink/10" />
-              <SkeletonBlock lines={2} />
-            </div>
-            <div>
-              <div className="mb-2 h-3.5 w-28 animate-pulse rounded bg-ink/10" />
-              <SkeletonBlock lines={3} />
-            </div>
+        {digestPending ? (
+          // Explicit pending panel with a working close (the wrapper onClick
+          // already closes; this dedicated button makes the intent obvious
+          // and gives thumb-reach parity with the X in the header).
+          <div className="rounded-card border border-line bg-white p-6 text-center">
+            <div
+              className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-2 border-line border-t-ink"
+              aria-hidden
+            />
+            <p className="text-[15px] font-semibold tracking-tight text-ink">Drafting your update…</p>
+            <p className="mt-1.5 text-[13px] font-medium leading-snug text-muted">
+              Reading your recent shift logs. This takes about a minute.
+            </p>
+            <button
+              type="button"
+              onClick={onClose}
+              className="mt-4 w-full rounded-btn border border-line py-2.5 text-[14px] font-semibold text-ink active:scale-[0.99]"
+            >
+              Close — I’ll get a ping
+            </button>
+            <p className="mt-2 text-[11px] font-medium text-faint">
+              Keeps running if you leave. We’ll notify you when it’s ready.
+            </p>
           </div>
         ) : (
         <div className="space-y-4">
+          {/* Glance-first headline (Section 4). One-sentence tldr from the
+              agent, or the sample's if we're on fallback. Display headline
+              only — no fill / callout box — to stay in Sydney's monochrome. */}
+          {rendered.headline && (
+            <p className="text-[18px] font-bold leading-snug tracking-tight text-ink">
+              {rendered.headline}
+            </p>
+          )}
+
           {/* Actionable items live in the notification center now — the digest
               just shows a glanceable count that links out. Only genuinely-open
               (unacknowledged / unresolved) items are counted. */}
@@ -140,31 +185,22 @@ export default function VisitDigestModal({ open, onClose, role, onOpenInbox }) {
             </button>
           )}
 
-          {seeMeds && (
+          {seeMeds && rendered.pattern?.text && (
             <div className="rounded-card border border-watch-fg/30 bg-white p-4">
               <div className="mb-1.5 flex items-center gap-2 text-watch-fg">
                 <TrendUpIcon width={17} height={17} strokeWidth={2} />
                 <p className="text-[15px] font-bold">Bedside noticed a pattern</p>
               </div>
-              <p className="text-[13px] font-medium leading-snug text-ink/80">{digest.pattern.text}</p>
+              <p className="text-[13px] font-medium leading-snug text-ink/80">{rendered.pattern.text}</p>
             </div>
           )}
 
           <section>
             <h3 className="mb-2 text-[15px] font-bold text-ink">What’s changed</h3>
-            <div className="space-y-3 rounded-card border border-line bg-white p-4">
-              {digest.changed.map((c) => {
-                const Icon = CHANGE_ICON[c.icon] || TrendDownIcon
-                return (
-                  <div key={c.title} className="flex gap-3">
-                    <Icon width={17} height={17} strokeWidth={2} className="mt-0.5 shrink-0 text-icon" />
-                    <div className="min-w-0">
-                      <p className="text-[14px] font-bold text-ink">{c.title}</p>
-                      <p className="text-[13px] font-medium leading-snug text-ink/70">{c.detail}</p>
-                    </div>
-                  </div>
-                )
-              })}
+            <div className="overflow-hidden rounded-card border border-line bg-white">
+              {(rendered.changed ?? []).map((c, i) => (
+                <ChangedChip key={c.title} item={c} isFirst={i === 0} />
+              ))}
             </div>
           </section>
 

@@ -19,7 +19,7 @@ const DEST = resolve(REPO_ROOT, "supabase/functions/_shared/prompts.ts");
 // Matches:  "## A<n> - <anything>\n\n```<optional lang>\n<prompt>\n```"
 const PATTERN = /##\s*A(\d+)\b[^\n]*\n+```(?:\w+)?\n([\s\S]*?)\n```/g;
 
-const REQUIRED = ["1", "2", "3"];
+const REQUIRED = ["1", "2", "3", "4"];
 
 const src = await readFile(SRC, "utf8");
 
