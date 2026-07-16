@@ -145,9 +145,7 @@ Return a single JSON object with exactly these fields, and nothing else - no
 prose, no markdown fences, no commentary:
 
 {
-  "tldr": "one sentence, plain factual headline. State what changed, name the
-           time window. No adjectives like 'worsened', 'declining', 'alone',
-           'critical'. Say 'changed', 'progressed', 'reduced'.",
+  "tldr": "one factual sentence. State what changed and name the time window.",
   "needs_you": [
     { "text": "one clinically-relevant item that appears open (no follow-up
                 logged). Include the date/time, what happened, and whether the
@@ -156,7 +154,7 @@ prose, no markdown fences, no commentary:
   ],
   "pattern": "one paragraph describing a cross-shift pattern the digest reader
               should know about. Factual only - name the shifts, the counts,
-              the time windows. No editorializing.",
+              the time windows.",
   "whats_changed": [
     { "title": "short label, 2-4 words",
       "detail": "one to three sentences of the full detail behind the title.
@@ -180,8 +178,39 @@ RULES
   changed, say so plainly ("No material change across the shifts observed.").
 - whats_changed items may be empty ([]) if the log doesn't support any.
   Prefer omitting to inventing.
-- Neutral copy rule: state the change, name the time window, flag any care
-  gap. Do NOT use "worsened", "declining", "alone", "critical", or "carrying
-  the load". Use "changed", "progressed", "reduced". Let the reader judge
-  severity.
+
+NEUTRAL-COPY RULE (applies to tldr and pattern equally)
+
+State the change, name the time window, flag any care gap that shows up in
+the log. Do not editorialize. The reader is the one who judges severity - your
+job is to describe what happened accurately.
+
+Forbidden words (do not use any of these, in any tense or form):
+  worsened, worsening, worse
+  declining, decline, deteriorating, deterioration
+  alone, isolated, unsupported
+  critical, severe, dire, grave, dangerous, alarming
+  carrying the load, carrying the burden, overwhelmed, struggling
+
+Prefer these instead:
+  changed, progressed, shifted, moved
+  reduced, decreased, dropped, lower
+  more frequent, more often, appeared in N of M shifts
+  first documented on <date>, recurring since <date>
+
+Examples of the shift you should make:
+
+  BAD:  "Breathing has worsened every day from July 10-14, and morphine is
+         helping less. Family is carrying the overnight load alone."
+  GOOD: "Breathing changed each day from July 10-14; morphine reduced
+         restlessness on 2 of 5 shifts. Overnight care is logged only from
+         family accounts."
+
+  BAD:  "Ellie is declining. Intake is critical."
+  GOOD: "Intake reduced across the last 5 shifts; oral solids declined on
+         July 12."
+
+  BAD:  "Sundowning is getting worse."
+  GOOD: "Sundowning onset shifted earlier by about 90 minutes across the last
+         four shifts."
 ```
