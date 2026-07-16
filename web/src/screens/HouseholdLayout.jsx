@@ -3,6 +3,7 @@ import { Outlet, useLocation } from 'react-router-dom'
 import { HouseholdProvider, useHousehold } from '../state/HouseholdContext'
 import BottomNav from '../components/BottomNav'
 import Sidebar from '../components/Sidebar'
+import DigestReadyToast from '../components/DigestReadyToast'
 import ProfileGate from './ProfileGate'
 
 function RouteAuditLogger() {
@@ -40,6 +41,7 @@ function HouseholdShell() {
         </div>
       </div>
       {activeProfile && <BottomNav />}
+      {activeProfile && <DigestReadyToast />}
     </>
   )
 }

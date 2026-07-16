@@ -7,8 +7,10 @@ import {
   profiles as initialProfiles,
   generalVolunteerSlot,
   defaultGeneralCode,
+  visitDigest as fallbackDigest,
 } from '../mockData'
 import { isWithinWindow } from '../utils/time'
+import { fetchVisitDigest, refreshVisitDigest as invalidateDigestCache } from '../lib/api'
 
 const HouseholdContext = createContext(null)
 
@@ -74,6 +76,19 @@ export function HouseholdProvider({ children }) {
   const [secondsUntilTimeout, setSecondsUntilTimeout] = useState(null)
   const expiresAtRef = useRef(null)
 
+  // Digest state lives here, not in the modal, so closing the modal cannot
+  // cancel or restart the ~60s get-trends fetch. Fire-once per provider mount;
+  // the modal is a pure reader. `digestSeen` tracks whether the user has
+  // opened the modal since the last resolve — it gates the toast + bell.
+  const [digest, setDigest] = useState(null)
+  const [digestPending, setDigestPending] = useState(false)
+  const [digestSeen, setDigestSeen] = useState(false)
+  // Bumping this counter is how the toast asks the timeline (which mounts the
+  // modal) to open. Watching a monotonic counter avoids the "flag stuck true"
+  // pitfall of a boolean.
+  const [digestOpenRequest, setDigestOpenRequest] = useState(0)
+  const digestPromiseRef = useRef(null)
+
   const logAccess = useCallback((actor, action, detail) => {
     // Updater must stay pure (no shared-counter side effects) — StrictMode
     // double-invokes it in dev, and a mutable counter here produced
@@ -99,6 +114,50 @@ export function HouseholdProvider({ children }) {
       ].slice(0, 50)
     })
   }, [])
+
+  // Subscribe to a digest fetch promise and mirror its result into React state.
+  // Guarded against stale promises so a refresh mid-fetch always wins.
+  const runDigestFetch = useCallback((promise) => {
+    digestPromiseRef.current = promise
+    setDigestPending(true)
+    setDigestSeen(false)
+    promise
+      .then((result) => {
+        if (digestPromiseRef.current !== promise) return
+        setDigest(result || { ...fallbackDigest, _fallback: true })
+        setDigestPending(false)
+      })
+      .catch(() => {
+        if (digestPromiseRef.current !== promise) return
+        setDigest({ ...fallbackDigest, _fallback: true })
+        setDigestPending(false)
+      })
+  }, [])
+
+  // Fire-once prefetch on provider mount — before PIN, before navigation, so
+  // the ~30-90s DO trends call runs while the user is doing anything else.
+  useEffect(() => {
+    runDigestFetch(fetchVisitDigest())
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const refreshDigest = useCallback(() => {
+    runDigestFetch(invalidateDigestCache())
+  }, [runDigestFetch])
+
+  // Called when the modal actually opens — flips digestReady off so the toast
+  // and any bell indicator relax.
+  const markDigestSeen = useCallback(() => {
+    setDigestSeen(true)
+  }, [])
+
+  // The toast's "View →" action bumps this counter; timeline listens and
+  // opens the modal in response.
+  const requestOpenDigest = useCallback(() => {
+    setDigestOpenRequest((n) => n + 1)
+  }, [])
+
+  const digestReady = !digestPending && digest !== null && !digestSeen
 
   const loginWithPin = useCallback((profileId, pin) => {
     const profile = profiles.find((p) => p.id === profileId)
@@ -340,6 +399,14 @@ export function HouseholdProvider({ children }) {
     updateProfileSchedule,
     updateGeneralSlot,
     regenerateGeneralCode,
+    // Digest — session-scoped, fire-once. See runDigestFetch above.
+    digest,
+    digestPending,
+    digestReady,
+    refreshDigest,
+    markDigestSeen,
+    requestOpenDigest,
+    digestOpenRequest,
   }
 
   return <HouseholdContext.Provider value={value}>{children}</HouseholdContext.Provider>

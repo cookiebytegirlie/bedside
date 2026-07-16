@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
 import { useHousehold } from '../state/HouseholdContext'
 import { profilePhotos } from '../assets'
@@ -283,7 +283,7 @@ function bucketByDay(groups) {
 export default function Timeline() {
   const { householdId } = useParams()
   const navigate = useNavigate()
-  const { logs, status, location, household, profiles, activeProfile, notifications, contacts } = useHousehold()
+  const { logs, status, location, household, profiles, activeProfile, notifications, contacts, digestOpenRequest } = useHousehold()
   const seeMeds = canSeeMeds(activeProfile?.role)
 
   // Hydrate the timeline from Supabase (if configured), merged with the seed /
@@ -318,6 +318,18 @@ export default function Timeline() {
       setDigestOpen(true)
     }
   }, [])
+
+  // Toast → open modal: HouseholdContext bumps digestOpenRequest when the
+  // "Your visit digest is ready · View →" toast is tapped. Watching a
+  // monotonic counter (not a boolean) lets us re-open on every tap without a
+  // caller having to reset a flag.
+  const lastOpenReqRef = useRef(digestOpenRequest)
+  useEffect(() => {
+    if (digestOpenRequest !== lastOpenReqRef.current) {
+      lastOpenReqRef.current = digestOpenRequest
+      setDigestOpen(true)
+    }
+  }, [digestOpenRequest])
 
   // Not tracked historically per entry — this reflects the household's
   // current status, shown as a lightweight reminder chip on every card
