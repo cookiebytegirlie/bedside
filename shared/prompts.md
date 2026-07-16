@@ -32,7 +32,7 @@ prose, no markdown fences, no commentary:
   "summary": "2-4 sentence plain-English recap of the shift",
   "urgency": "green" | "yellow" | "red",
   "urgency_reason": "one sentence citing what in the transcript drove the urgency",
-  "medications": [{ "name": "string", "time": "HH:MM or best available" }],
+  "medications": [{ "name": "string", "time": "HH:MM or best available", "dose": "e.g. '5mg' or '0.25 mL' — include ONLY if the transcript states it, otherwise omit the field", "route": "e.g. 'PO' or 'oral' — include ONLY if the transcript states it, otherwise omit the field", "reason": "e.g. 'for pain' or 'for restlessness' — include ONLY if the transcript states it, otherwise omit the field" }],
   "mood": "brief mood descriptor, or null if not mentioned",
   "interventions": [{ "what": "what was tried", "worked": "yes" | "no" | "unclear" }],
   "flag_for_next": "one sentence for the next shift to watch, or null",

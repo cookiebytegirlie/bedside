@@ -87,7 +87,18 @@ function normalize(data, transcript) {
     urgency,
     urgency_reason: typeof d.urgency_reason === 'string' ? d.urgency_reason : '',
     medications: Array.isArray(d.medications)
-      ? d.medications.map((m) => ({ name: String(m?.name ?? ''), time: String(m?.time ?? '') })).filter((m) => m.name)
+      ? d.medications
+          .map((m) => {
+            const out = { name: String(m?.name ?? ''), time: String(m?.time ?? '') }
+            // Optional dose/route/reason — pass through as strings when the
+            // agent captured them, so formatMedGiven can render the fuller
+            // "morphine 5mg PO @ 20:20 for pain" line instead of just name+time.
+            if (typeof m?.dose === 'string' && m.dose.trim()) out.dose = m.dose
+            if (typeof m?.route === 'string' && m.route.trim()) out.route = m.route
+            if (typeof m?.reason === 'string' && m.reason.trim()) out.reason = m.reason
+            return out
+          })
+          .filter((m) => m.name)
       : [],
     mood: d.mood ?? null,
     interventions: Array.isArray(d.interventions)

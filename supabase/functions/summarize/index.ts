@@ -86,6 +86,13 @@ function isValidShape(o: unknown): boolean {
       if (typeof mm.name !== "string" || typeof mm.time !== "string") {
         return false;
       }
+      // dose / route / reason are optional. Absent or null is fine (old rows
+      // won't have them). If present, they must be strings — anything else
+      // (number, object, boolean) is a shape violation.
+      for (const field of ["dose", "route", "reason"] as const) {
+        const v = mm[field];
+        if (v != null && typeof v !== "string") return false;
+      }
     }
   }
 
