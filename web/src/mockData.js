@@ -40,7 +40,7 @@ export const profiles = [
     role: 'Volunteer / Aide',
     initials: 'M',
     pin: '0000',
-    schedule: { startHour: 15, endHour: 20 }, // 3:00 PM - 8:00 PM daily
+    schedule: { startHour: 10, endHour: 20 }, // 10:00 AM - 8:00 PM daily
   },
   {
     id: 'ellie',
@@ -161,36 +161,156 @@ export const carePlan = {
     'Hand lotion & massage',
     'Repositioned for comfort',
   ],
-  routines: [
+  // A rough outline of Ellie's day, shown on the Info page as a vertical
+  // timeline — a reference, NOT a checklist. Times are deliberately fuzzy
+  // ("~10 AM"): this is the shape of a good day, not a schedule to hit.
+  // Grouped by the three parts of her day (ellieProfile.day holds the fuller
+  // picture of her mood and needs in each). The recurring care that anchors
+  // the day — repositioning every ~2 hrs, oral care after meals — is placed at
+  // representative times here rather than repeated at every interval, with the
+  // clinical "watch for" guidance folded into the relevant step.
+  dailyRoutine: [
     {
-      summary: 'Repositioning every 2 hours to prevent pressure sores',
-      detail: {
-        steps: [
-          'Turn her fully onto her side, supporting her back and knees with pillows.',
-          'Check her heels, hips, and tailbone for redness.',
-          'Log the time on her chart.',
-        ],
-        watchFor: 'A red area that doesn\'t fade within about 30 minutes of the pressure being relieved — flag it to the nurse before her next visit. Caught early, it\'s far easier to treat than a developed pressure sore.',
-      },
+      period: 'Morning',
+      note: 'Her best, most alert hours',
+      items: [
+        {
+          time: '~8:00 AM',
+          title: 'Wake & morning care',
+          detail: {
+            steps: [
+              'Open the blinds and freshen her up — mornings are her most alert stretch.',
+              'Oral care with a soft-bristle brush or moistened swab; check for dryness or bleeding gums.',
+            ],
+            watchFor: 'White patches on the tongue or inside the cheeks — could be thrush. Mention it to the nurse rather than treating it yourself.',
+          },
+        },
+        {
+          time: '~9:00 AM',
+          title: 'Breakfast',
+          detail: {
+            steps: [
+              'Applesauce or oatmeal with lukewarm chamomile tea and a little honey.',
+              'Offer small sips of water often — she forgets on her own.',
+              'If she insists she\'s already eaten, don\'t argue — offer a few bites and try again a little later.',
+            ],
+          },
+        },
+        {
+          time: '~10:00 AM',
+          title: 'Time together',
+          detail: {
+            steps: [
+              'Read the paper aloud or look through photo albums.',
+              'Ask about her students — she taught third grade for thirty-one years and lights right up.',
+            ],
+          },
+        },
+        {
+          time: '~11:00 AM',
+          title: 'Short walk',
+          detail: {
+            steps: [
+              'A short walk to the garden bench if she\'s steady on her feet, or sit by the sunroom window.',
+            ],
+          },
+        },
+      ],
     },
     {
-      summary: 'Oral care after each meal',
-      detail: {
-        steps: [
-          'Use a soft-bristle brush or moistened swab.',
-          'Check for dryness, sores, or bleeding gums while you\'re in there.',
-        ],
-        watchFor: 'White patches on the tongue or inside the cheeks — could be thrush. Mention it to the nurse rather than treating it yourself.',
-      },
+      period: 'Afternoon',
+      note: 'Quieter — often dozing',
+      items: [
+        {
+          time: '~12:30 PM',
+          title: 'Light lunch & oral care',
+          detail: {
+            steps: [
+              'Not very hungry midday — offer tea and a little fruit rather than a full meal.',
+              'Oral care again once she\'s finished.',
+            ],
+          },
+        },
+        {
+          time: '~1:30 PM',
+          title: 'Soft classical music & rest',
+          preference: true, // one of Ellie's stated preferences, not just a task
+          detail: {
+            steps: [
+              'Low volume near her armchair — it reliably keeps her settled through her dozing stretch.',
+            ],
+            watchFor: 'Anything louder or more upbeat — it can unsettle her instead.',
+          },
+        },
+        {
+          time: '~2:00 PM',
+          title: 'Reposition',
+          detail: {
+            steps: [
+              'Repositioned every ~2 hours through the day to prevent pressure sores.',
+              'Turn her fully onto her side, supporting her back and knees with pillows.',
+              'Check her heels, hips, and tailbone for redness, and log the time on her chart.',
+            ],
+            watchFor: 'A red area that doesn\'t fade within about 30 minutes of the pressure being relieved — flag it to the nurse before her next visit. Caught early, it\'s far easier to treat than a developed pressure sore.',
+          },
+        },
+        {
+          time: '~3:30 PM',
+          title: 'Hand lotion & massage',
+          detail: {
+            steps: [
+              'A slow lavender hand-lotion massage — her most reliable comfort.',
+            ],
+          },
+        },
+      ],
     },
     {
-      summary: 'Family prefers a text update after every shift, even if uneventful',
-      detail: {
-        steps: [
-          'A short text to Daniel — mood, intake, anything notable — keeps the family reassured without needing a phone call.',
-          '"Quiet shift, ate half her lunch, no concerns" is exactly the kind of message they want, even on an ordinary day.',
-        ],
-      },
+      period: 'Evening',
+      note: 'Settling her for the night',
+      items: [
+        {
+          time: '~5:00 PM',
+          title: 'Dim the lights before the turn',
+          preference: true, // no overhead lights after 7pm — her stated preference
+          detail: {
+            steps: [
+              'She gets anxious as the light fades. Dim the lamps and start the music before it happens — not after she\'s already upset.',
+              'Overhead lights off after 7 PM — lamp only.',
+            ],
+          },
+        },
+        {
+          time: '~5:30 PM',
+          title: 'Dinner & oral care',
+          detail: {
+            steps: [
+              'Something warm and easy — chamomile tea or warm milk. Nothing cold in the evening.',
+              'Oral care once more after she eats.',
+            ],
+          },
+        },
+        {
+          time: '~8:00 PM',
+          title: 'Reposition & settle',
+          detail: {
+            steps: [
+              'Reposition once more and tuck a warm blanket around her — she runs cold.',
+              'Big-band or soft music low, with the lighting warm and dim.',
+            ],
+          },
+        },
+        {
+          time: 'End of shift',
+          title: 'Text Daniel an update',
+          detail: {
+            steps: [
+              'A short text — mood, intake, anything notable — keeps the family reassured without needing a phone call.',
+              '"Quiet shift, ate half her lunch, no concerns" is exactly the kind of message they want, even on an ordinary day.',
+            ],
+          },
+        },
+      ],
     },
   ],
   emergencyContacts: [
@@ -210,6 +330,19 @@ export const carePlanDocument = {
   fileName: 'Ellie-V-Care-Plan.pdf',
   lastUpdated: '2026-07-10T16:32:00-07:00',
 }
+
+// The day's checkable tasks — an actionable companion to carePlan.dailyRoutine
+// (which stays a read-only reference). These are what a caregiver ticks off on
+// the Log page and sees interleaved on the home Timeline. In-memory, like the
+// logs: `done`/`flagged` flip at runtime and reset on reload. `time` is a plain
+// "HH:MM" so a today-stamped timestamp can be derived for timeline sorting.
+export const dailyTasks = [
+  { id: 'task-1', title: 'Morning oral care', note: 'Soft brush; check for dryness.', time: '08:00', flagged: false, done: true },
+  { id: 'task-2', title: 'Offer breakfast & fluids', note: 'Oatmeal + chamomile tea.', time: '09:00', flagged: false, done: false },
+  { id: 'task-3', title: 'Reposition', note: 'Every ~2 hrs; check heels/hips.', time: '14:00', flagged: true, done: false },
+  { id: 'task-4', title: 'Soft classical music', note: 'Low volume near her armchair.', time: '13:30', flagged: false, done: false },
+  { id: 'task-5', title: 'Text Daniel an update', note: 'Mood, intake, anything notable.', time: '19:30', flagged: false, done: false },
+]
 
 // A personal bio of Ellie, written by Daniel (her son, primary caregiver),
 // for the "Meet Ellie" page. This is the human context a clinical care plan

@@ -2,24 +2,31 @@ import { Link } from 'react-router-dom'
 import { DEMO_HOUSEHOLD_ID } from '../mockData'
 import { householdLogo } from '../assets'
 
+// Splash intro shown before profile selection. The logo, wordmark, and CTA
+// animate in as a short launch sequence (see `.intro-*` keyframes in index.css);
+// the button stands in for scanning the printed QR code by the bed.
 export default function Entry() {
   return (
-    <div className="bg-household mx-auto flex min-h-screen max-w-md flex-col items-center justify-center px-6 text-center">
-      <img src={householdLogo} alt="Bedside" className="mb-6 h-16 w-16 rounded-2xl shadow-card" />
-      <h1 className="bg-gradient-to-b from-brand-green via-brand-mist to-brand-peach bg-clip-text text-3xl font-bold text-transparent">
-        Bedside
-      </h1>
-      <p className="mt-2 max-w-xs text-base font-medium text-muted">
-        In real use, a printed QR code by the bed opens a household's private link directly —
-        no account, no app store. This screen just stands in for that scan.
-      </p>
+    <div className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center bg-white px-6 text-center">
+      <img
+        src={householdLogo}
+        alt="Bedside"
+        className="intro-logo h-20 w-20 rounded-[22px] shadow-soft"
+      />
+
+      <h1 className="intro-title mt-5 text-3xl font-bold tracking-tight text-ink">BedSide</h1>
+
       <Link
         to={`/household/${DEMO_HOUSEHOLD_ID}`}
-        className="mt-8 w-full rounded-full bg-mist py-4 text-lg font-bold text-white shadow-card active:scale-[0.98]"
+        className="intro-cta mt-8 rounded-full bg-ink px-8 py-3.5 text-base font-bold text-white transition-transform active:scale-[0.98]"
       >
-        Simulate QR scan → Enter household
+        Scan QR code
       </Link>
-      <p className="mt-3 text-sm font-semibold text-ink/30">/household/{DEMO_HOUSEHOLD_ID}</p>
+
+      <p className="intro-cta mt-5 max-w-xs text-xs font-medium leading-relaxed text-faint">
+        In real use, a printed QR code by the bed opens a household's private link
+        directly — no account, no app store. This stands in for that scan.
+      </p>
     </div>
   )
 }

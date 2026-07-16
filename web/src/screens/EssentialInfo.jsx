@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import { useHousehold } from '../state/HouseholdContext'
-import { authorizingPhysician, visitDigest, carePlanDocument } from '../mockData'
+import { authorizingPhysician, carePlanDocument } from '../mockData'
 import { isNurse } from '../utils/roles'
 import OnDutyHeader from '../components/OnDutyHeader'
 import InfoPanel from '../components/InfoPanel'
 import CarePlanLink from '../components/CarePlanLink'
-import { PillIcon, PhoneIcon, ShieldIcon, CalendarIcon, ChevronRightIcon, CheckIcon, XIcon } from '../components/icons'
+import { PillIcon, PhoneIcon, ShieldIcon, CalendarIcon, ChevronRightIcon } from '../components/icons'
 
 const SIGNED_DATE_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
@@ -83,35 +83,139 @@ function ExpandToggle({ open, onToggle, label }) {
 
 // One preference/routine row: the summary line always shows; a toggle
 // reveals a fuller list of steps (plus an optional "Watch for" callout)
-// underneath.
-function DetailItem({ summary, detail }) {
+// underneath. `preference` surfaces the same tag used on the timeline, for the
+// preferences that aren't tied to a time of day (e.g. what she's called).
+function DetailItem({ summary, detail, preference }) {
   const [open, setOpen] = useState(false)
   const expanded = open && detail
   return (
     <li>
       <div className="flex items-start gap-2">
-        <span className="min-w-0 flex-1 text-base font-semibold text-ink">{summary}</span>
+        <span className="min-w-0 flex-1">
+          {preference && (
+            <span className="mb-1.5 block">
+              <PreferenceTag />
+            </span>
+          )}
+          <span className="text-base font-semibold text-ink">{summary}</span>
+        </span>
         {detail && (
           <ExpandToggle open={open} onToggle={() => setOpen((o) => !o)} label={open ? 'Hide detail' : 'Show detail'} />
         )}
       </div>
       {expanded && (
-        <div className="mt-1.5 space-y-1.5">
-          <ul className="space-y-1 rounded-none border-l-2 border-line pl-5 text-[13px] leading-snug text-ink">
+        <div className="mt-2 space-y-3">
+          <ul className="list-disc space-y-2.5 pl-[17px] text-[14px] leading-relaxed text-ink/90 marker:text-faint">
             {detail.steps.map((step, i) => (
-              <li key={i} className="[text-wrap:pretty]">
+              <li key={i} className="pl-1 [text-wrap:pretty]">
                 {noWidow(step)}
               </li>
             ))}
           </ul>
           {detail.watchFor && (
-            <p className="rounded-card border border-watch-solid/50 px-2.5 py-2 text-[13px] leading-snug text-ink/80 [text-wrap:pretty]">
+            <p className="rounded-card border border-watch-solid/50 px-3 py-2.5 text-[14px] leading-relaxed text-ink/90 [text-wrap:pretty]">
               <span className="font-bold text-ink">Watch for:</span> {noWidow(detail.watchFor)}
             </p>
           )}
         </div>
       )}
     </li>
+  )
+}
+
+// Marks an item that reflects one of Ellie's stated preferences (as opposed to
+// a clinical task). Now that Preferences and Routines are one section, this is
+// how a preference stays visible in place instead of living in its own list.
+function PreferenceTag() {
+  return (
+    <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-routine-tint px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-routine-fg">
+      <span className="h-1.5 w-1.5 rounded-full bg-routine-dot" />
+      Preference
+    </span>
+  )
+}
+
+// One stop on the daily-routine timeline. Time + title always show; a chevron
+// reveals the fuller steps (and an optional "Watch for" callout) underneath.
+// The connector line is drawn from this node's center down past the row gap to
+// the next node's center, so it stays continuous no matter how tall the row —
+// the next node's white fill masks the overlap. Suppressed on the last item.
+function RoutineItem({ item, last }) {
+  const [open, setOpen] = useState(false)
+  const hasDetail = Boolean(item.detail && (item.detail.steps?.length || item.detail.watchFor))
+  return (
+    <li className="relative flex gap-3 pb-4 last:pb-0">
+      {!last && <span className="absolute left-[11px] top-3.5 -bottom-3.5 z-0 w-px bg-line" />}
+      <span
+        className={`relative z-10 mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border bg-white ${
+          item.preference ? 'border-routine-dot/50' : 'border-line'
+        }`}
+      >
+        <span className={`rounded-full ${item.preference ? 'h-2.5 w-2.5 bg-routine-solid' : 'h-2 w-2 bg-ink/60'}`} />
+      </span>
+      <div className="min-w-0 flex-1">
+        <button
+          type="button"
+          onClick={() => hasDetail && setOpen((o) => !o)}
+          aria-expanded={hasDetail ? open : undefined}
+          className={`flex w-full items-start gap-2 text-left ${hasDetail ? '' : 'cursor-default'}`}
+        >
+          <span className="min-w-0 flex-1">
+            <span className="block text-[12px] font-semibold uppercase tracking-wide text-muted">{item.time}</span>
+            <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1">
+              <span className="text-[15px] font-semibold tracking-tight text-ink">{item.title}</span>
+              {item.preference && <PreferenceTag />}
+            </span>
+          </span>
+          {hasDetail && (
+            <ChevronRightIcon
+              width={15}
+              height={15}
+              strokeWidth={2.5}
+              className={`mt-4 shrink-0 text-faint transition-transform ${open ? 'rotate-90' : ''}`}
+            />
+          )}
+        </button>
+        {open && hasDetail && (
+          <div className="mt-2 space-y-3">
+            {item.detail.steps?.length > 0 && (
+              <ul className="list-disc space-y-2.5 pl-[17px] text-[14px] leading-relaxed text-ink/90 marker:text-faint">
+                {item.detail.steps.map((step, i) => (
+                  <li key={i} className="pl-1 [text-wrap:pretty]">
+                    {noWidow(step)}
+                  </li>
+                ))}
+              </ul>
+            )}
+            {item.detail.watchFor && (
+              <p className="rounded-card border border-watch-solid/50 px-3 py-2.5 text-[14px] leading-relaxed text-ink/90 [text-wrap:pretty]">
+                <span className="font-bold text-ink">Watch for:</span> {noWidow(item.detail.watchFor)}
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+    </li>
+  )
+}
+
+// The full daily routine as a grouped vertical timeline: Morning / Afternoon /
+// Evening, each a labeled cluster of time-stamped stops. A reference outline of
+// a good day, not a checklist — nothing here is tappable except to read more.
+function RoutineTimeline({ groups }) {
+  return (
+    <div className="space-y-5">
+      {groups.map((group) => (
+        <div key={group.period}>
+          <p className="mb-2.5 text-[11px] font-bold uppercase tracking-wide text-muted">{group.period}</p>
+          <ul>
+            {group.items.map((item, i) => (
+              <RoutineItem key={item.title} item={item} last={i === group.items.length - 1} />
+            ))}
+          </ul>
+        </div>
+      ))}
+    </div>
   )
 }
 
@@ -154,38 +258,42 @@ function MedicationItem({ med, lastGiven }) {
   )
 }
 
+// Contact info stacks top-to-bottom so each line owns its own weight tier —
+// name (primary), role · availability (muted secondary), then the phone number
+// as the tappable value — instead of the name and phone competing as two bold
+// ink lines with the role wedged between them.
 function ContactRow({ name, role, phone, availability }) {
   return (
-    <a href={telHref(phone)} className="flex items-center gap-3 px-4 py-3.5 active:scale-[0.98]">
-      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-ink">
+    <a href={telHref(phone)} className="flex items-start gap-3 px-4 py-3.5 active:scale-[0.98]">
+      <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-ink">
         <PhoneIcon width={17} height={17} strokeWidth={2} />
       </span>
       <span className="min-w-0 flex-1">
         <span className="block text-[15px] font-semibold tracking-tight text-ink">{name}</span>
-        <span className="block text-[13px] font-medium text-muted">
+        <span className="mt-0.5 block text-[13px] font-medium leading-snug text-muted">
           {role}
           {availability ? ` · ${availability}` : ''}
         </span>
+        <span className="mt-1.5 block text-[14px] font-semibold tracking-tight text-ink">{phone}</span>
       </span>
-      <span className="shrink-0 text-[13px] font-semibold text-ink">{phone}</span>
     </a>
   )
 }
 
-// ContactRow and the bio toggle share one rounded sage container so the bio
-// reads as nested detail of the contact, not a separate card below it.
+// The bio lives in its own zone under a hairline divider, so it reads as a
+// distinct block from the contact header rather than flowing straight out of it.
 function ContactCard({ contact }) {
   const [open, setOpen] = useState(false)
   return (
     <InfoPanel className="overflow-hidden">
       <ContactRow {...contact} />
       {contact.bio && (
-        <InfoPanel nested>
+        <div className="border-t border-line">
           <button
             type="button"
             onClick={() => setOpen((o) => !o)}
             aria-expanded={open}
-            className="flex w-full items-center gap-2 px-4 py-2 text-left"
+            className="flex w-full items-center gap-2 px-4 py-2.5 text-left"
           >
             <span className="text-[12px] font-bold text-ink">{open ? 'Hide bio' : `About ${firstName(contact.name)}`}</span>
             <ChevronRightIcon
@@ -195,8 +303,12 @@ function ContactCard({ contact }) {
               className={`ml-auto shrink-0 text-ink transition-transform ${open ? 'rotate-90' : ''}`}
             />
           </button>
-          {open && <p className="px-4 pb-3 text-[13px] font-medium leading-snug [text-wrap:pretty]">{contact.bio}</p>}
-        </InfoPanel>
+          {open && (
+            <p className="px-4 pb-3.5 text-[13.5px] font-medium leading-relaxed text-ink/90 [text-wrap:pretty]">
+              {contact.bio}
+            </p>
+          )}
+        </div>
       )}
     </InfoPanel>
   )
@@ -205,8 +317,11 @@ function ContactCard({ contact }) {
 export default function EssentialInfo() {
   const { householdId } = useParams()
   const location = useLocation()
-  const { carePlan, contacts, activeProfile, logs } = useHousehold()
+  const { carePlan, contacts, activeProfile, logs, household } = useHousehold()
   const isClinicalRole = /nurse|family/i.test(activeProfile?.role || '')
+  // The one preference with no place on the daily timeline — her preferred
+  // name — is pinned to the top of the merged Routines & preferences section.
+  const namingPref = carePlan.preferences?.find((p) => /ellie/i.test(p.summary))
 
   // "How we know this" links elsewhere in the app route here with a
   // `#section-id` hash. React Router navigates via history.pushState, which
@@ -292,58 +407,27 @@ export default function EssentialInfo() {
           </Section>
         )}
 
-        {isClinicalRole && (
-          <Section id="preferences" title="Preferences">
-            <ul className="space-y-2">
-              {carePlan.preferences.map((p) => (
-                <DetailItem key={p.summary} summary={p.summary} detail={p.detail} />
-              ))}
-            </ul>
-          </Section>
-        )}
+        <Section id="routines" title="Routines & preferences">
+          <p className="-mt-1 text-[13px] font-medium leading-snug text-muted">
+            A rough outline of {household.preferredName}'s day — a reference, not a checklist. Times are approximate; her
+            personal preferences are marked.
+          </p>
 
-        {isClinicalRole && (
-          <Section id="care-plan" title="Care plan">
-            <div>
-              <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-muted">What settles her</p>
-              <ul className="space-y-2">
-                {carePlan.comfortMeasures.map((m) => (
-                  <li key={m} className="flex gap-2 text-base font-medium text-ink/80">
-                    <span className="text-ink">•</span>
-                    {m}
-                  </li>
-                ))}
+          {/* Preferences that aren't tied to a time of day (e.g. what she's
+              called) live here, at the top, rather than in the timeline. The
+              `preferences` id keeps the "How we know this" deep-links working
+              now that the standalone Preferences section is gone. */}
+          {namingPref && (
+            <div id="preferences" className="mt-3 rounded-card border border-routine-dot/40 bg-routine-tint/40 p-3.5">
+              <ul>
+                <DetailItem summary={namingPref.summary} detail={namingPref.detail} preference />
               </ul>
             </div>
+          )}
 
-            <div className="border-t border-line pt-3">
-              <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-muted">What's working</p>
-              <div className="space-y-2">
-                {visitDigest.working.map((w) => (
-                  <div key={w.label} className="flex items-center gap-2.5">
-                    {w.status === 'yes' && (
-                      <CheckIcon width={16} height={16} strokeWidth={2.5} className="shrink-0 text-routine-fg" />
-                    )}
-                    {w.status === 'no' && (
-                      <XIcon width={16} height={16} strokeWidth={2.5} className="shrink-0 text-attention-fg" />
-                    )}
-                    {w.status === 'mixed' && (
-                      <span className="h-3 w-3 shrink-0 rounded-full border-2 border-watch-fg" />
-                    )}
-                    <span className="text-[14px] font-medium text-ink">{w.label}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </Section>
-        )}
-
-        <Section id="routines" title="Routines">
-          <ul className="space-y-2">
-            {carePlan.routines.map((r) => (
-              <DetailItem key={r.summary} summary={r.summary} detail={r.detail} />
-            ))}
-          </ul>
+          <div className="mt-4">
+            <RoutineTimeline groups={carePlan.dailyRoutine} />
+          </div>
         </Section>
 
         <Section id="hospice-team" title="Hospice team">

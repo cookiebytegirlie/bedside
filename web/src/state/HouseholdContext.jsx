@@ -7,6 +7,7 @@ import {
   profiles as initialProfiles,
   generalVolunteerSlot,
   defaultGeneralCode,
+  dailyTasks,
   visitDigest as fallbackDigest,
 } from '../mockData'
 import { isWithinWindow } from '../utils/time'
@@ -62,6 +63,7 @@ function randomCode() {
 
 export function HouseholdProvider({ children }) {
   const [logs, setLogs] = useState(initialLogs)
+  const [tasks, setTasks] = useState(dailyTasks)
   const [status, setStatus] = useState('Sleeping')
   const [location, setLocation] = useState('Bedroom')
   const [profiles, setProfiles] = useState(initialProfiles)
@@ -297,6 +299,32 @@ export function HouseholdProvider({ children }) {
     }))
   }, [])
 
+  // Daily-task mutations — all in-memory, matching the logs' mock approach.
+  // Toggling `done` ticks a task off; toggling `flagged` marks it for
+  // attention. `addTask` appends a new task with a generated id (defaults for
+  // flagged/done so a freshly-added task starts open and unflagged).
+  const toggleTask = useCallback((id) => {
+    setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, done: !t.done } : t)))
+  }, [])
+
+  const toggleTaskFlag = useCallback((id) => {
+    setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, flagged: !t.flagged } : t)))
+  }, [])
+
+  const addTask = useCallback(({ title, note, time }) => {
+    setTasks((prev) => [
+      ...prev,
+      {
+        id: `task-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        title,
+        note: note ?? '',
+        time: time ?? '',
+        flagged: false,
+        done: false,
+      },
+    ])
+  }, [])
+
   // Notification-center transitions. Each stores { status, note, by, at } so
   // downstream can show who handled it, when, and how. Acknowledging and
   // resolving both drop the item from the unread / open counts (which key on
@@ -376,6 +404,10 @@ export function HouseholdProvider({ children }) {
     logs,
     addLog,
     updateLog,
+    tasks,
+    toggleTask,
+    toggleTaskFlag,
+    addTask,
     logMedsGiven,
     notifications,
     unreadNotificationCount,

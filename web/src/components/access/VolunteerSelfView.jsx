@@ -94,7 +94,7 @@ export default function VolunteerSelfView({ volunteer, coordinator }) {
             className={`relative h-7 w-12 rounded-full transition-colors ${remindersOn ? 'bg-mist' : 'bg-sage-200'}`}
           >
             <span
-              className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow-card transition-transform ${
+              className={`absolute left-0 top-1 h-5 w-5 rounded-full bg-white shadow-card transition-transform ${
                 remindersOn ? 'translate-x-6' : 'translate-x-1'
               }`}
             />
