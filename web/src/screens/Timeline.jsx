@@ -344,7 +344,7 @@ export default function Timeline() {
         <button
           type="button"
           onClick={() => setDigestOpen(true)}
-          className="mx-auto flex w-full max-w-md items-center gap-2.5 rounded-card border border-line bg-white p-3 transition-transform active:scale-[0.99] lg:max-w-2xl"
+          className="mx-auto flex w-full max-w-md items-center gap-2.5 rounded-card border border-line bg-white p-3 transition-transform active:scale-[0.99]"
         >
           <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-track text-ink">
             <SparklesIcon width={17} height={17} strokeWidth={2} />
@@ -356,7 +356,7 @@ export default function Timeline() {
           <ChevronRightIcon width={16} height={16} strokeWidth={2.5} className="shrink-0 text-faint" />
         </button>
 
-        <div className="relative mx-auto mt-16 max-w-md lg:max-w-2xl">
+        <div className="relative mx-auto mt-16 max-w-md">
           <div className="rounded-card border border-line bg-white p-4 pb-4 pt-8">
             <div className="pl-28">
               <p className="text-[19px] font-semibold tracking-tight leading-tight text-ink">{household.preferredName}'s current status</p>

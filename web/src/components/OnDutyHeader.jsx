@@ -22,7 +22,7 @@ export default function OnDutyHeader() {
 
   return (
     <header className="sticky top-0 z-10 border-b border-line bg-white px-4 pb-4 pt-[calc(env(safe-area-inset-top)+1.25rem)]">
-      <div className="relative mx-auto flex max-w-md items-start justify-between gap-3 lg:max-w-2xl">
+      <div className="relative mx-auto flex max-w-md items-start justify-between gap-3">
         <img
           src={householdLogo}
           alt="Bedside"

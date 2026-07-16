@@ -14,7 +14,7 @@ export default function DigestReadyToast() {
 
   return (
     <div
-      className="fixed inset-x-0 bottom-24 z-40 flex justify-center px-4 lg:bottom-6"
+      className="fixed inset-x-0 bottom-24 z-40 flex justify-center px-4"
       // pointer-events on the wrapper is auto — the pill itself handles taps.
       role="status"
       aria-live="polite"
