@@ -248,6 +248,11 @@ function PinStep({ profile, onBack }) {
       </div>
 
       <p className="mb-1.5 text-center text-sm font-semibold text-muted">Enter your PIN</p>
+      <p className="mb-1.5 text-center">
+        <span className="inline-flex items-center gap-1 rounded-full bg-track px-2.5 py-0.5 text-xs font-bold text-ink">
+          Demo PIN: 0000
+        </span>
+      </p>
       <div className={`mb-2 flex justify-center gap-3 ${error === 'wrong' ? 'animate-pulse' : ''}`}>
         {Array.from({ length: PIN_LENGTH }).map((_, i) => (
           <span
